@@ -37,3 +37,9 @@ RECONNECT_EVERY_S = 3.0     # how often to retry when the ESP32 is unreachable
 DATABASE_URL = os.getenv("DATABASE_URL", "")  # Neon connection string, from .env
 LOG_INTERVAL_S = 10         # insert one row every 10 seconds
 MAX_BUFFERED_ROWS = 360     # keep up to 1 hour of rows in memory if Neon is unreachable
+
+# ---------------- Dashboard feed (web dashboard camera panel) ----------------
+STREAM_HOST = "127.0.0.1"   # localhost only: the video never leaves the laptop
+STREAM_PORT = int(os.getenv("STREAM_PORT", "8080"))
+STREAM_MAX_FPS = 15         # cap the dashboard video to save CPU
+STREAM_JPEG_QUALITY = 70

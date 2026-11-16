@@ -16,6 +16,7 @@ import config
 from db_logger import DBLogger
 from esp32_link import ESP32Link
 from hud import draw_hud
+from stream_server import StreamServer
 from vision import Camera, PersonCounter
 
 WINDOW_NAME = "Crowd Control Monitoring System"
@@ -26,6 +27,7 @@ def main():
     counter = PersonCounter()
     esp32 = ESP32Link()
     db = DBLogger()
+    stream = StreamServer()         # feeds the web dashboard
 
     limit = config.CROWD_LIMIT
     crowded = False
@@ -59,6 +61,8 @@ def main():
             last_time = now
             draw_hud(frame, people, count, limit, crowded, fps, esp32.status, db.status)
             cv2.imshow(WINDOW_NAME, frame)
+            stream.publish(frame, {"count": count, "limit": limit, "crowded": crowded,
+                                   "fps": round(fps, 1), "esp32": esp32.status, "db": db.status})
 
             # 4) Keyboard controls
             key = cv2.waitKey(1) & 0xFF
@@ -74,6 +78,7 @@ def main():
         camera.release()
         esp32.close()
         db.close()
+        stream.close()
         cv2.destroyAllWindows()
 
 

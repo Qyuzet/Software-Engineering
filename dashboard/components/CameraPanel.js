@@ -1,0 +1,42 @@
+"use client";
+
+import { VideoOff } from "lucide-react";
+import { useEffect, useState } from "react";
+
+import { EDGE_URL } from "@/lib/constants";
+
+export default function CameraPanel({ live }) {
+  // A new session each time main.py comes back, so the <img> reconnects to the stream
+  const [session, setSession] = useState(0);
+  useEffect(() => {
+    if (live.online) setSession((s) => s + 1);
+  }, [live.online]);
+
+  const s = live.data;
+  return (
+    <div className="panel camera-panel">
+      <div className="camera">
+        {live.online ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={session} src={`${EDGE_URL}/video?s=${session}`} alt="Live camera feed with detected people" />
+        ) : (
+          <div className="camera-off">
+            <VideoOff size={36} />
+            <p>Camera offline</p>
+            <small>
+              Start the edge script on this laptop: <code>python main.py</code>
+              {" "}(or <code>python simulate.py</code> without a camera)
+            </small>
+          </div>
+        )}
+        <span className="cam-label">Camera 1 · Lecture Hall A</span>
+        {live.online && (
+          <div className="cam-live">
+            <span className={`count-bubble ${s.crowded ? "red" : "green"}`} title="People in view">{s.count}</span>
+            <span className="live-chip"><i />LIVE · {Math.round(s.fps)} FPS</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
