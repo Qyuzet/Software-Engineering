@@ -11,11 +11,18 @@ from dotenv import load_dotenv
 load_dotenv()  # reads .env in the project folder, if it exists
 
 # ---------------- Camera / vision (YOLOv8 Engine) ----------------
-CAMERA_INDEX = 0            # 0 = default webcam; try 1 or 2 for an external USB webcam
+# CAMERA_SOURCE (set it in .env):
+#   0, 1, 2 ...  = a webcam (0 = built-in, 1 or 2 = USB webcam or a phone app like DroidCam/Iriun)
+#   a URL        = a phone stream, e.g. http://192.168.43.1:8080/video (IP Webcam app)
+_camera = os.getenv("CAMERA_SOURCE", "0").strip()
+CAMERA_SOURCE = int(_camera) if _camera.isdigit() else _camera
+CAMERA_RECONNECT_AFTER = 30 # failed reads in a row (~3 s) before reopening the camera
 FRAME_WIDTH = 1280
 FRAME_HEIGHT = 720
 MODEL_FILE = "yolov8n.pt"   # 'n' = nano, fastest; downloads automatically on first run
-CONFIDENCE = 0.40           # ignore detections below 40% confidence
+CONFIDENCE = 0.30           # ignore detections below 30% confidence (lower = finds half-hidden people)
+IOU_THRESHOLD = 0.8         # boxes overlapping more than this are merged (higher = keeps people standing close)
+IMAGE_SIZE = 960            # YOLO input size; 640 = fast, 960/1280 = finds small or far-away people
 SMOOTHING_FRAMES = 5        # median of the last N counts to stop flickering
 PERSON_CLASS_ID = 0         # COCO class 0 = "person"
 

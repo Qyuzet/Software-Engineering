@@ -77,8 +77,17 @@ class ESP32Link:
         if self.mode == "serial":
             if self._serial is None:
                 import serial  # pyserial
-                self._serial = serial.Serial(config.SERIAL_PORT, config.SERIAL_BAUD, timeout=1)
-                time.sleep(2)  # opening the port resets the board; wait for it to boot
+                ser = serial.Serial()
+                ser.port = config.SERIAL_PORT
+                ser.baudrate = config.SERIAL_BAUD
+                ser.timeout = 1
+                # Keep the reset (RTS) and boot (DTR) lines released, so opening the
+                # port doesn't restart the ESP32 or put it into upload mode
+                ser.dtr = False
+                ser.rts = False
+                ser.open()
+                self._serial = ser
+                time.sleep(2)  # give the board time to settle if it restarted anyway
             self._serial.write(value.encode())
         elif self.mode == "wifi":
             url = f"http://{config.ESP32_HOST}:{config.ESP32_PORT}/state?v={value}"

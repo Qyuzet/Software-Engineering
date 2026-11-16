@@ -1,10 +1,13 @@
 """
-vision.py - USB Webcam [E] + YOLOv8 Engine [S].
+vision.py - Camera [E] + YOLOv8 Engine [S].
 
-Opens the camera and counts people in each frame.
+Opens the camera and counts people in each frame. The camera can be a webcam
+(CAMERA_SOURCE=0) or a phone stream (CAMERA_SOURCE=http://.../video).
+If the camera drops out, it is reopened automatically.
 """
 
 import platform
+import time
 from collections import deque
 from statistics import median
 
@@ -14,25 +17,64 @@ from ultralytics import YOLO
 import config
 
 
-class Camera:
-    """Wraps the USB webcam."""
+def is_stream(source) -> bool:
+    """True for a network stream such as a phone camera URL."""
+    return isinstance(source, str) and "://" in source
 
-    def __init__(self, index: int = config.CAMERA_INDEX):
-        # On Windows, the DirectShow backend opens USB webcams much faster
-        backend = cv2.CAP_DSHOW if platform.system() == "Windows" else cv2.CAP_ANY
-        self.cap = cv2.VideoCapture(index, backend)
-        if not self.cap.isOpened():
-            raise SystemExit(f"Could not open camera {index}. Try another CAMERA_INDEX in config.py.")
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.FRAME_WIDTH)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.FRAME_HEIGHT)
+
+class Camera:
+    """Wraps the webcam or phone stream."""
+
+    def __init__(self, source=config.CAMERA_SOURCE):
+        self.source = source
+        self.cap = None
+        self._failed_reads = 0
+        if not self._open():
+            if is_stream(source):
+                raise SystemExit(f"Could not open the phone camera at {source}. Check the address, that the "
+                                 "camera app is running, and that the laptop is on the same Wi-Fi.")
+            raise SystemExit(f"Could not open camera {source}. Try another CAMERA_SOURCE in .env (0, 1 or 2).")
+        print(f"[CAMERA] Opened {source}")
+
+    def _open(self) -> bool:
+        if is_stream(self.source):
+            cap = cv2.VideoCapture(self.source)             # FFmpeg reads network streams
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)             # keep only the newest frame (less lag)
+        else:
+            # On Windows, the DirectShow backend opens USB webcams much faster
+            backend = cv2.CAP_DSHOW if platform.system() == "Windows" else cv2.CAP_ANY
+            cap = cv2.VideoCapture(int(self.source), backend)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.FRAME_WIDTH)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.FRAME_HEIGHT)
+        if not cap.isOpened():
+            cap.release()
+            return False
+        self.cap = cap
+        return True
 
     def read(self):
         """Return a frame, or None if the camera did not deliver one."""
-        ok, frame = self.cap.read()
-        return frame if ok else None
+        ok, frame = self.cap.read() if self.cap is not None else (False, None)
+        if ok:
+            self._failed_reads = 0
+            return frame
+
+        # Camera dropped out (phone app stopped, Wi-Fi blip, cable pulled): reopen it
+        self._failed_reads += 1
+        if self._failed_reads >= config.CAMERA_RECONNECT_AFTER:
+            print("[CAMERA] WARNING: camera offline. Trying to reconnect...")
+            self.release()
+            if self._open():
+                print("[CAMERA] Reconnected.")
+            else:
+                time.sleep(1)
+            self._failed_reads = 0
+        return None
 
     def release(self):
-        self.cap.release()
+        if self.cap is not None:
+            self.cap.release()
+            self.cap = None
 
 
 class PersonCounter:
@@ -46,7 +88,8 @@ class PersonCounter:
     def detect(self, frame):
         """Return (people, smoothed_count). people = list of (x1, y1, x2, y2, confidence)."""
         result = self.model(frame, classes=[config.PERSON_CLASS_ID],
-                            conf=config.CONFIDENCE, verbose=False)[0]
+                            conf=config.CONFIDENCE, iou=config.IOU_THRESHOLD,
+                            imgsz=config.IMAGE_SIZE, verbose=False)[0]
         people = [
             (*map(int, box), conf)
             for box, conf in zip(result.boxes.xyxy.tolist(), result.boxes.conf.tolist())
