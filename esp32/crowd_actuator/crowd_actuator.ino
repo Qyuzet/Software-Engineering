@@ -6,10 +6,10 @@
   over USB serial (ESP32_MODE=serial) or Wi-Fi (ESP32_MODE=wifi,
   HTTP GET http://<ESP32 address>/state?v=1). Both work at the same time.
 
-  LEDs (breadboard wiring: P25 green, P26 yellow, P27 red):
-    green on        = NORMAL
-    red blinking    = CROWDED
-    yellow blinking = no signal from the laptop for 6 s (script stopped or link lost)
+  Outputs (breadboard wiring: P25 green, P26 yellow, P27 red, P33 buzzer):
+    green on              = NORMAL
+    red blinking + beeps  = CROWDED
+    yellow blinking       = no signal from the laptop for 6 s (script stopped or link lost)
 
   Python re-sends the state every 2 s (RESEND_EVERY_S in config.py), so 6 s of
   silence means three missed messages.
@@ -26,6 +26,11 @@ const char* WIFI_PASSWORD = "bayardululah";
 #define GREEN_LED 25                      // NORMAL
 #define YELLOW_LED 26                     // no signal
 #define RED_LED 27                        // CROWDED
+#define BUZZER_PIN 33                     // beeps while CROWDED
+
+#define BUZZER_ENABLED 1                  // 0 = mute the buzzer (handy while testing)
+#define BUZZER_ACTIVE 1                   // 1 = active buzzer (beeps on its own), 0 = passive buzzer
+#define BUZZER_TONE_HZ 2000               // pitch for a passive buzzer
 
 #define SIGNAL_TIMEOUT_MS 6000            // silence longer than this = no signal
 #define RED_BLINK_MS 300
@@ -38,12 +43,25 @@ bool hasSignal = false;                   // received at least one command
 unsigned long lastCommandAt = 0;
 unsigned long lastBlinkAt = 0;
 bool blinkOn = false;
+bool buzzerOn = false;
 
 #if USE_WIFI
 WebServer server(80);
 bool wifiConnected = false;
 unsigned long lastWifiAttempt = 0;
 #endif
+
+void setBuzzer(bool on) {
+  if (!BUZZER_ENABLED) on = false;
+  if (on == buzzerOn) return;             // only change the pin when needed
+  buzzerOn = on;
+#if BUZZER_ACTIVE
+  digitalWrite(BUZZER_PIN, on ? HIGH : LOW);
+#else
+  if (on) tone(BUZZER_PIN, BUZZER_TONE_HZ);
+  else noTone(BUZZER_PIN);
+#endif
+}
 
 // '1' or '0' from Python, by USB or Wi-Fi
 void applyCommand(char c) {
@@ -61,12 +79,13 @@ bool signalLost() {
   return !hasSignal || millis() - lastCommandAt > SIGNAL_TIMEOUT_MS;
 }
 
-void updateLeds() {
+void updateOutputs() {
   unsigned long now = millis();
 
   if (signalLost()) {
     digitalWrite(GREEN_LED, LOW);
     digitalWrite(RED_LED, LOW);
+    setBuzzer(false);
     if (now - lastBlinkAt > YELLOW_BLINK_MS) {
       lastBlinkAt = now;
       blinkOn = !blinkOn;
@@ -79,11 +98,13 @@ void updateLeds() {
       lastBlinkAt = now;
       blinkOn = !blinkOn;
       digitalWrite(RED_LED, blinkOn);
+      setBuzzer(blinkOn);                 // beep together with the red LED
     }
   } else {
     digitalWrite(GREEN_LED, HIGH);
     digitalWrite(YELLOW_LED, LOW);
     digitalWrite(RED_LED, LOW);
+    setBuzzer(false);
   }
 }
 
@@ -104,6 +125,7 @@ void handleRoot() {
   String msg = "Crowd Control ESP32 Actuator\n";
   if (signalLost()) msg += "Status: NO SIGNAL from the laptop\n";
   else msg += crowded ? "Status: CROWDED\n" : "Status: NORMAL\n";
+  msg += BUZZER_ENABLED ? "Buzzer: on\n" : "Buzzer: muted\n";
   server.send(200, "text/plain", msg);
 }
 
@@ -135,6 +157,8 @@ void setup() {
   pinMode(GREEN_LED, OUTPUT);
   pinMode(YELLOW_LED, OUTPUT);
   pinMode(RED_LED, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
   Serial.println();
   Serial.println("Crowd Control ESP32 Actuator ready. Waiting for '1' or '0'.");
 
@@ -157,5 +181,5 @@ void loop() {
   maintainWifi();
 #endif
 
-  updateLeds();
+  updateOutputs();
 }
