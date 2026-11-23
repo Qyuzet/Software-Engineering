@@ -13,6 +13,7 @@ import time
 import cv2
 
 import config
+from crowd_state import CrowdState
 from db_logger import DBLogger
 from esp32_link import ESP32Link
 from hud import draw_hud
@@ -30,7 +31,8 @@ def main():
     stream = StreamServer()         # feeds the web dashboard
 
     limit = config.CROWD_LIMIT
-    crowded = False
+    state = CrowdState()            # FR-02 rule with hysteresis + hold times
+    crowded = state.crowded
     esp32.send_state(crowded)       # start the ESP32 in the NORMAL state
     fps, last_time = 0.0, time.time()
 
@@ -46,10 +48,9 @@ def main():
             # 1) Count people (YOLOv8 Engine)
             people, count = counter.detect(frame)
 
-            # 2) Threshold rule (FR-02: alert when count > limit)
-            now_crowded = count > limit
-            if now_crowded != crowded:
-                crowded = now_crowded
+            # 2) Threshold rule (FR-02: count > limit for a few seconds; see crowd_state.py)
+            if state.update(count, limit):
+                crowded = state.crowded
                 print(f"[{time.strftime('%H:%M:%S')}] State -> "
                       f"{'CROWDED' if crowded else 'NORMAL'} (count {count}, limit {limit})")
             esp32.send_state(crowded)                 # INT-01 (non-blocking)

@@ -28,6 +28,10 @@ PERSON_CLASS_ID = 0         # COCO class 0 = "person"
 
 # ---------------- Threshold rule (FR-02) ----------------
 CROWD_LIMIT = 10            # alert when count is GREATER than this
+CROWD_ENTER_HOLD_S = 3.0    # count must stay above the limit this long before CROWDED
+CROWD_EXIT_HOLD_S = 5.0     # count must stay below the limit this long before NORMAL again
+CROWD_EXIT_MARGIN = 1       # NORMAL again only at limit - 1 or less (hysteresis band)
+CROWD_GRACE_S = 1.0         # dips shorter than this (one-frame drop-outs) don't restart the timer
 
 # ---------------- ESP32 link (INT-01) ----------------
 # "serial" = USB cable (step 4), "wifi" = over the network (step 5), "off" = no hardware

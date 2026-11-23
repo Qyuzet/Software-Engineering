@@ -20,6 +20,7 @@ import cv2
 import numpy as np
 
 import config
+from crowd_state import CrowdState
 from db_logger import DBLogger
 from esp32_link import ESP32Link
 from hud import draw_hud
@@ -92,7 +93,8 @@ def main():
 
     people = []
     limit = config.CROWD_LIMIT
-    crowded = False
+    state = CrowdState()            # same FR-02 rule as main.py
+    crowded = state.crowded
     manual = None                   # None = automatic wave, otherwise a fixed number of people
     esp32.send_state(crowded)
     start = time.time()
@@ -120,10 +122,9 @@ def main():
             boxes = [(*p.box(), p.conf) for p in people]
             count = len(people)
 
-            # 2) Threshold rule (FR-02: alert when count > limit), same as main.py
-            now_crowded = count > limit
-            if now_crowded != crowded:
-                crowded = now_crowded
+            # 2) Threshold rule (FR-02 with hysteresis + hold times), same as main.py
+            if state.update(count, limit):
+                crowded = state.crowded
                 print(f"[{time.strftime('%H:%M:%S')}] State -> "
                       f"{'CROWDED' if crowded else 'NORMAL'} (count {count}, limit {limit})")
             esp32.send_state(crowded)
