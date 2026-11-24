@@ -1,0 +1,19 @@
+{
+  "name": "crowd-control-hub",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "build": "next build",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "lucide-react": "^1.66.0",
+    "next": "^15.5.28",
+    "pg": "^8.23.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "recharts": "^3.10.1",
+    "ws": "^8.18.0"
+  }
+}
