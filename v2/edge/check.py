@@ -103,7 +103,8 @@ def check_worker():
 
 def check_token():
     if not config.EDGE_TOKEN:
-        return "fail", f"EDGE_TOKEN is empty. Get it with:  {TOKEN_HELP}"
+        return "fail", ("not set on this laptop yet (needed once). Paste it in the laptop app: Run -> Server -> "
+                        f"Edge token, then Save. The admin gets it with:  {TOKEN_HELP}")
     try:
         with _get(f"{config.HUB_URL}/api/logs", data=b'{"rows": []}',
                   headers={"Content-Type": "application/json", "x-api-key": config.EDGE_TOKEN}):
@@ -113,7 +114,8 @@ def check_token():
         if err.code == 503:
             return "ok", "accepted (but the worker has no database)"
         if err.code == 401:
-            return "fail", f"wrong EDGE_TOKEN. Get the right one with:  {TOKEN_HELP}"
+            return "fail", ("the server does not accept this token. Paste the right one in the laptop app: "
+                            f"Run -> Server -> Edge token. The admin gets it with:  {TOKEN_HELP}")
         return "fail", f"HTTP {err.code}"
     except Exception as err:  # noqa: BLE001
         return "fail", f"could not test ({_why(err)})"

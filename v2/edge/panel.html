@@ -170,7 +170,7 @@
       <div><label for="site">Room name</label><input id="site" type="text" maxlength="60"></div>
     </div>
     <label class="check-inline"><input id="showWindow" type="checkbox"> Also show the video window on this laptop</label>
-    <details>
+    <details id="serverBox">
       <summary>Server</summary>
       <div class="row">
         <div><label for="workerUrl">Worker URL</label><input id="workerUrl" type="text" autocomplete="off"></div>
@@ -286,7 +286,11 @@ function fillForm(s) {
   $("espHost").value = s.esp32_host;
   $("limit").value = s.crowd_limit; $("site").value = s.site_name; $("showWindow").checked = s.show_window;
   $("workerUrl").value = s.worker_url;
-  $("tokenState").textContent = s.token_set ? "(set)" : "(missing)";
+  $("tokenState").textContent = s.token_set ? "(set)" : "(missing - needed once, ask the admin)";
+  if (!s.token_set) {                       // first run on this laptop: show where the token goes
+    $("serverBox").open = true;
+    $("token").placeholder = "paste the edge token here, then Save";
+  }
 }
 
 function collect() {
