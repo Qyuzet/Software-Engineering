@@ -59,7 +59,7 @@ if [ -f "$CD_FILE" ]; then
   # shellcheck source=/dev/null
   . "$CD_FILE"
 fi
-REPO_URL="${want_repo:-${REPO_URL:-https://github.com/Timotimanuel12/Software-Engineering.git}}"
+REPO_URL="${want_repo:-${REPO_URL:-https://github.com/Qyuzet/Software-Engineering.git}}"
 DEPLOY_BRANCH="${want_branch:-${DEPLOY_BRANCH:-master}}"
 printf 'REPO_URL=%s\nDEPLOY_BRANCH=%s\nCHECK_EVERY_S=%s\n' "$REPO_URL" "$DEPLOY_BRANCH" "${CHECK_EVERY_S:-60}" > "$CD_FILE"
 

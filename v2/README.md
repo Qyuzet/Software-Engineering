@@ -29,7 +29,11 @@ Vercel: web/  ── crowd.etzalgroup.com ── the dashboard (static Next.js, 
 
 ## Dashboard on Vercel (`web/`)
 
-1. Vercel → Add New → Project → import this repo.
+Set up as Vercel project `crowd-dashboard` (qyuzet's projects), connected to
+`github.com/Qyuzet/Software-Engineering` (our fork of the team repo), production branch `master`.
+To set it up again somewhere else:
+
+1. Vercel → Add New → Project → import the repo.
 2. **Root Directory: `v2/web`**. Framework: Next.js (detected). Nothing else to change.
 3. Environment Variables: `NEXT_PUBLIC_WORKER_URL` = `https://crowd-api.etzalgroup.com`
 4. Settings → Domains → add `crowd.etzalgroup.com`.
