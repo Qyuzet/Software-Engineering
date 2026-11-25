@@ -1,4 +1,10 @@
-import { ensureTable } from "./db";
+// GET /api/metrics?date=YYYY-MM-DD&tz=Area/City: everything the dashboard draws for one day.
+// Reads Postgres; without a database (or if it fails) it answers with demo data instead.
+
+import { DEFAULT_LIMIT } from "./constants.js";
+import { getDemoDay } from "./demoData.js";
+import { summarize } from "./summary.js";
+import { isValidDate, nowIn, validTz } from "./time.js";
 
 // $1 = day (YYYY-MM-DD), $2 = IANA time zone. Rows are grouped by the viewer's local day.
 const DAY_RANGE = `
@@ -57,15 +63,15 @@ FROM crowd_logs
 ORDER BY id DESC
 LIMIT 1`;
 
-/** Reads one day from Neon in the same shape getDemoDay() returns. */
-export async function getDayFromNeon(pool, date, tz) {
-  await ensureTable(pool);
+/** Reads one day from Postgres in the same shape getDemoDay() returns. */
+async function readDay(db, date, tz) {
+  await db.ready();
   const params = [date, tz];
   const [buckets, episodes, calendar, latest] = await Promise.all([
-    pool.query(BUCKETS_SQL, params),
-    pool.query(EPISODES_SQL, params),
-    pool.query(CALENDAR_SQL, params),
-    pool.query(LATEST_SQL),
+    db.query(BUCKETS_SQL, params),
+    db.query(EPISODES_SQL, params),
+    db.query(CALENDAR_SQL, params),
+    db.query(LATEST_SQL),
   ]);
   const last = latest.rows[0];
   return {
@@ -75,5 +81,37 @@ export async function getDayFromNeon(pool, date, tz) {
     latest: last
       ? { count: last.person_count, limit: last.crowd_limit, crowded: last.is_crowded, at: last.recorded_at }
       : null,
+  };
+}
+
+export async function getMetrics(db, searchParams, { intervalS, log = console }) {
+  const tz = validTz(searchParams.get("tz"));
+  const date = isValidDate(searchParams.get("date")) ? searchParams.get("date") : nowIn(tz).date;
+
+  let day = null;
+  let source = "demo";
+  let warning = null;
+  if (db) {
+    try {
+      day = await readDay(db, date, tz);
+      source = "postgres";
+    } catch (err) {
+      log.error("[metrics]", err.message);
+      warning = "Could not read the database. Showing demo data.";   // details stay in the server log
+    }
+  }
+  if (!day) day = getDemoDay(date, tz);
+
+  const toMinutes = (rows) => Math.round((rows * intervalS) / 60);
+  return {
+    source,
+    warning,
+    date,
+    tz,
+    limit: day.latest?.limit ?? day.buckets.at(-1)?.lim ?? DEFAULT_LIMIT,
+    latest: day.latest,
+    episodes: day.episodes,
+    calendar: Object.fromEntries(Object.entries(day.calendar).map(([d, rows]) => [d, toMinutes(rows)])),
+    ...summarize(day.buckets, day.episodes, intervalS),
   };
 }

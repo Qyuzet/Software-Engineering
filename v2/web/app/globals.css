@@ -170,7 +170,7 @@ button:disabled { cursor: default; }
 }
 .tb-reset:disabled { opacity: 0.55; }
 .source-chip, .warn-chip { font-size: 11px; padding: 3px 8px; border-radius: 10px; }
-.source-chip.neon { background: rgba(46, 158, 79, 0.25); color: #c9f0d3; }
+.source-chip.postgres { background: rgba(46, 158, 79, 0.25); color: #c9f0d3; }
 .source-chip.demo { background: rgba(242, 193, 46, 0.25); color: #ffe9a6; }
 .warn-chip { background: rgba(217, 54, 54, 0.35); color: #ffd5d5; }
 

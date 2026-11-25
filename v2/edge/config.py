@@ -57,9 +57,10 @@ ESP32_TIMEOUT_S = 0.5
 RESEND_EVERY_S = 2.0
 RECONNECT_EVERY_S = 3.0
 
-# ---------------- Server hub on etzal (video + status + logs) ----------------
-HUB_URL = os.getenv("HUB_URL", "").rstrip("/")     # e.g. https://crowd.etzalgroup.com
-EDGE_TOKEN = os.getenv("EDGE_TOKEN", "")           # same value as EDGE_TOKEN on the server
+# ---------------- Worker on etzal (video + status + logs) ----------------
+# WORKER_URL (HUB_URL also accepted, the v2.0 name), e.g. https://crowd-api.etzalgroup.com
+HUB_URL = (os.getenv("WORKER_URL") or os.getenv("HUB_URL", "")).strip().rstrip("/")
+EDGE_TOKEN = os.getenv("EDGE_TOKEN", "")           # same value as EDGE_TOKEN in the worker's env
 SITE_NAME = os.getenv("SITE_NAME", "Lecture Hall A")
 UPLINK_MAX_FPS = float(os.getenv("UPLINK_MAX_FPS", "8"))     # video frames sent per second
 UPLINK_WIDTH = int(os.getenv("UPLINK_WIDTH", "960"))         # frames are shrunk to this width

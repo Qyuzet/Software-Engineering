@@ -1,4 +1,5 @@
-# v2 additions (the root .gitignore already covers .env, node_modules, .next, *.pt)
+# v2 additions (the root .gitignore already covers .env, .env*.local, node_modules, .next, *.pt)
 edge/data/
 esp32/crowd_actuator/secrets.h
-web/.env
+worker/.env
+worker/REVISION

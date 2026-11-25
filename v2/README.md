@@ -1,68 +1,108 @@
 # Crowd Control Monitoring System v2
 
-v2 streams the live video to the website from any network, and logs to Postgres on our own
+v2 streams the live video to a website from any network, and logs to Postgres on our own
 server (etzal) instead of Neon. The v1 code in the project root is unchanged and still works.
 
 ```
 Phone (IP Webcam) ──Wi-Fi──> Laptop: edge/main.py
                                ├─ YOLOv8 count + crowd rule (3 s in / 5 s out, hysteresis)
                                ├─> ESP32 (wifi or usb): LEDs + buzzer
-                               ├─> wss://<hub>/live/ingest   annotated video + live status
-                               └─> https://<hub>/api/logs     one row / 10 s, queued on disk first
+                               ├─> wss://crowd-api.etzalgroup.com/live/ingest   video + live status
+                               └─> https://crowd-api.etzalgroup.com/api/logs     1 row / 10 s, queued on disk first
                                           │
-Server etzal: web/server.js (pm2 "crowd-web", 127.0.0.1:3020) ── Cloudflare tunnel ── browsers
-  ├─ /live/video   MJPEG to every viewer (slow viewers skip frames, never lag)
-  ├─ /live/status  count, limit, crowded, fps, esp32, db, camera
-  ├─ /api/*        dashboard data from Postgres db "crowd"
-  └─ /             the dashboard
+etzal: worker/ (pm2 "crowd-worker", 127.0.0.1:3020) ── Cloudflare tunnel ── crowd-api.etzalgroup.com
+  ├─ /live/video, /live/status   MJPEG + status for every viewer (slow viewers skip frames)
+  ├─ /api/metrics                charts and stats from Postgres db "crowd"
+  └─ /api/logs                   rows from the laptop, stored once even if re-sent
+                                          ▲  (the browser calls the worker directly)
+Vercel: web/  ── crowd.etzalgroup.com ── the dashboard (static Next.js, no server code)
 ```
 
-| Folder | Runs on | What changed from v1 |
+| Folder | Runs on | What it is |
 |---|---|---|
-| `edge/` | laptop | Camera read on its own thread (no lag build-up with the IP cam), pushes video out over one WebSocket, logs via the server with an on-disk queue, `SHOW_WINDOW=false` for no pop-up, `CAMERA_SOURCE=sim` for testing |
-| `web/` | etzal | Copy of `dashboard/` + `server.js` (live relay). Same origin for video and data: no CORS, no mixed content |
-| `esp32/` | ESP32 | Same sketch; Wi-Fi name/password moved to `secrets.h` (gitignored) |
-| `deploy/` | laptop → etzal | `setup-server.sh` (once), `deploy.sh` (every update), pm2 config |
+| `web/` | **Vercel** | The dashboard. Only static pages; the one setting is `NEXT_PUBLIC_WORKER_URL` |
+| `worker/` | **etzal** | Node service: live relay, dashboard API, log ingest into Postgres. Has its own tests |
+| `edge/` | laptop | Camera on its own thread, YOLO, ESP32, pushes video out over one WebSocket, on-disk log queue |
+| `esp32/` | ESP32 | Same sketch as v1; Wi-Fi name/password in `secrets.h` (gitignored) |
+| `deploy/` | etzal | `setup-server.sh` (once), `autodeploy.sh` (CD), `worker-release.sh`, pm2 config |
+| `../.github/workflows/v2-ci.yml` | GitHub | CI for everything above |
 
-## Run the laptop side
+## Dashboard on Vercel (`web/`)
+
+1. Vercel → Add New → Project → import this repo.
+2. **Root Directory: `v2/web`**. Framework: Next.js (detected). Nothing else to change.
+3. Environment Variables: `NEXT_PUBLIC_WORKER_URL` = `https://crowd-api.etzalgroup.com`
+4. Settings → Domains → add `crowd.etzalgroup.com`.
+
+Every push then deploys by itself: the production branch to `crowd.etzalgroup.com`, other branches
+to preview URLs. `NEXT_PUBLIC_*` values are built into the page, so redeploy after changing it.
+Locally: `cp .env.example .env.local`, then `npm install` and `npm run dev`.
+
+## Worker on etzal (`worker/` + `deploy/`)
+
+Once, from the laptop:
+
+```bash
+ssh -p 2222 mydebian 'bash -s' < v2/deploy/setup-server.sh
+# another repo or branch: ssh -p 2222 mydebian 'REPO_URL=... DEPLOY_BRANCH=... bash -s' < v2/deploy/setup-server.sh
+```
+
+It creates the database and `~/crowd-intelligent/worker.env` (DATABASE_URL, EDGE_TOKEN, CORS_ORIGINS),
+checks out only `v2/worker` + `v2/deploy` from GitHub, and starts three pm2 apps:
+
+| pm2 app | What it does |
+|---|---|
+| `crowd-worker` | the worker on 127.0.0.1:3020 |
+| `crowd-autodeploy` | **CD**: every 60 s fetches the branch; when `v2/worker` changed it installs, runs the tests, swaps, checks `/live/health` reports the new commit, and rolls back if not |
+| `crowd-tunnel` | temporary `trycloudflare.com` URL, until `crowd-api.etzalgroup.com` is set up (below) |
+
+```bash
+pm2 logs crowd-autodeploy          # what CD is doing
+pm2 restart crowd-autodeploy       # deploy now instead of within a minute
+curl -s localhost:3020/live/health # {"ok":true,"version":"<commit>",...}
+```
+
+The branch is in `~/crowd-intelligent/autodeploy.env`. CD pulls from the public repo, so there are
+no SSH keys in GitHub and no GitHub keys on the server. Anyone who can push to that branch can run
+code on etzal, so protect the branch. Never `pm2 delete` other apps on this server.
+
+## CI (GitHub Actions)
+
+`v2-ci.yml` runs on every push and pull request that touches `v2/`:
+
+- **worker**: unit + HTTP + WebSocket tests, and Postgres tests against a real Postgres 15
+- **web**: `next build`, the same as Vercel
+- **edge**: compiles every file, then runs `edge/main.py` with the simulated camera against a real worker and checks that video and status arrive
+- **deploy-scripts**: shellcheck
+
+## Domains (Cloudflare, etzalgroup.com)
+
+| Name | Points to | How |
+|---|---|---|
+| `crowd.etzalgroup.com` | Vercel | DNS → CNAME `crowd` → `cname.vercel-dns.com`, **DNS only** (grey cloud) |
+| `crowd-api.etzalgroup.com` | the worker | Zero Trust → Networks → Tunnels → `cloudflared-etzal` → Public Hostname → `crowd-api` . `etzalgroup.com` → `http://localhost:3020` |
+
+`crowd-api` instead of `api.crowd`: Cloudflare's free certificate covers only one level of subdomain.
+Once `https://crowd-api.etzalgroup.com/live/health` answers, stop the quick tunnel:
+`pm2 stop crowd-tunnel && pm2 save`. Optionally limit who may read the API from a browser:
+`CORS_ORIGINS=https://crowd.etzalgroup.com` in `worker.env`, then `pm2 restart crowd-worker`.
+
+## Run the laptop side (`edge/`)
 
 ```powershell
 cd v2/edge
 pip install -r requirements.txt
-copy .env.example .env      # set HUB_URL and EDGE_TOKEN (see below)
+copy .env.example .env      # WORKER_URL and EDGE_TOKEN
 python main.py
 ```
 
-`edge/.env` only needs what is new; everything else (`CAMERA_SOURCE`, `ESP32_MODE`, `ESP32_HOST`,
-`SERIAL_PORT`) is read from the project's root `.env`, like v1. `ESP32_MODE` accepts `wifi`, `usb` or `off`.
-
-- `HUB_URL`: the public address of the server (now a `trycloudflare.com` address, see below).
-- `EDGE_TOKEN`: `ssh -p 2222 mydebian 'grep EDGE_TOKEN ~/crowd-intelligent/web/.env'`
-
-What keeps working when something fails:
+`edge/.env` only needs what is new; `CAMERA_SOURCE`, `ESP32_MODE`, `ESP32_HOST` and `SERIAL_PORT` are
+read from the project's root `.env`, like v1. `ESP32_MODE` accepts `wifi`, `usb` or `off`.
+The token: `ssh -p 2222 mydebian 'grep EDGE_TOKEN ~/crowd-intelligent/worker.env'`
 
 | Failure | What happens |
 |---|---|
 | Phone app stops / Wi-Fi blip | Camera reconnects by itself; website shows "Phone camera offline", ESP32 keeps its state |
-| Internet or server down | Detection + ESP32 keep running; rows wait in `edge/data/queue.db` and upload later, never twice |
+| Internet or worker down | Detection + ESP32 keep running; rows wait in `edge/data/queue.db` and upload later, never twice |
 | ESP32 unplugged / unreachable | Retries every 3 s; ESP32 blinks yellow after 6 s without a signal |
-| Laptop restarts | Queued rows survive on disk |
-
-## Deploy the server side
-
-```bash
-ssh -p 2222 mydebian 'bash -s' < v2/deploy/setup-server.sh   # once: db "crowd", role "crowd", web/.env
-bash v2/deploy/deploy.sh                                     # every update: upload, build, pm2 reload
-```
-
-On etzal: `~/crowd-intelligent/`, pm2 apps `crowd-web` and `crowd-tunnel`, Postgres db `crowd`.
-Never `pm2 delete` other apps on that server.
-
-## Permanent address
-
-`crowd-tunnel` is a quick tunnel: its `https://<random>.trycloudflare.com` address changes whenever it
-restarts (`pm2 logs crowd-tunnel | grep trycloudflare` shows the current one). For a fixed address,
-add a public hostname to the existing `cloudflared-etzal` tunnel in the Cloudflare dashboard
-(Zero Trust → Networks → Tunnels → etzal → Public Hostname):
-`crowd.etzalgroup.com` → `http://localhost:3020`. Then put that in `HUB_URL` and stop the quick tunnel:
-`pm2 stop crowd-tunnel && pm2 save`.
+| Bad worker release | Tests fail or health check fails: the previous version keeps running |

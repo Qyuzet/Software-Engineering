@@ -1,7 +1,7 @@
 """
-uplink.py - pushes the annotated video and live status to the server hub.
+uplink.py - pushes the annotated video and live status to the worker on etzal.
 
-One outgoing WebSocket (wss://<HUB_URL>/live/ingest), so it works from any
+One outgoing WebSocket (wss://<WORKER_URL>/live/ingest), so it works from any
 network (campus Wi-Fi, phone hotspot) without opening ports on the laptop:
   binary message = one JPEG frame
   text message   = status JSON (count, limit, crowded, fps, esp32, db, camera)
@@ -22,7 +22,7 @@ import config
 
 class Uplink:
     def __init__(self, url: str = config.HUB_URL, token: str = config.EDGE_TOKEN):
-        self.status = "off (no HUB_URL)" if not url else "connecting"
+        self.status = "off (no WORKER_URL)" if not url else "connecting"
         self._url = url.replace("https://", "wss://", 1).replace("http://", "ws://", 1) + "/live/ingest"
         self._token = token
         self._frame = None
@@ -97,7 +97,7 @@ class Uplink:
                     reason = str(err).split(" -+-+- ")[0]      # drop the response headers dump
                     if "401" in reason:
                         reason += " - check EDGE_TOKEN"
-                    print(f"[UPLINK] WARNING: hub unreachable ({reason}). Retrying; detection keeps running.")
+                    print(f"[UPLINK] WARNING: worker unreachable ({reason}). Retrying; detection keeps running.")
                 self.status = "OFFLINE - retrying"
                 self._stop.wait(backoff)
                 backoff = min(backoff * 2, 15)

@@ -1,8 +1,8 @@
 // Realistic but made-up lecture-hall data, used until DATABASE_URL is set.
 // It is seeded by the date, so the same day always looks the same.
 
-import { DEFAULT_LIMIT, NEAR_LIMIT_RATIO } from "./constants";
-import { daysInMonth, nowIn } from "./time";
+import { DEFAULT_LIMIT, NEAR_LIMIT_RATIO } from "./constants.js";
+import { daysInMonth, nowIn } from "./time.js";
 
 const PER_BUCKET = 30; // 5 minutes of rows logged every 10 s
 

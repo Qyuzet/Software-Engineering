@@ -3,8 +3,7 @@ import { fileURLToPath } from "node:url";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ["pg"],
-  // A stray package-lock.json in the user folder confuses Next's root detection
+  // This folder is the whole Vercel project; don't let a lockfile higher up confuse Next
   outputFileTracingRoot: path.dirname(fileURLToPath(import.meta.url)),
 };
 

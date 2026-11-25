@@ -17,10 +17,10 @@ export default function Toolbar({ metric, onMetric, date, today, onDate, source,
         </select>
         {source && (
           <span className={`source-chip ${source}`}>
-            {source === "neon" ? "Live data · Postgres" : "Demo data (no DATABASE_URL)"}
+            {source === "postgres" ? "Live data · Postgres" : "Demo data (worker has no database)"}
           </span>
         )}
-        {(warning || error) && <span className="warn-chip">{warning || `Dashboard API: ${error}`}</span>}
+        {(warning || error) && <span className="warn-chip">{warning || `Worker: ${error}`}</span>}
       </div>
 
       <div className="toolbar-right">

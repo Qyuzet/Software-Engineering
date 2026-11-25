@@ -12,7 +12,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      {/* Extensions such as Grammarly add attributes to <body> before React loads */}
+      <body className={inter.className} suppressHydrationWarning>{children}</body>
     </html>
   );
 }

@@ -1,19 +1,18 @@
 {
-  "name": "crowd-control-hub",
-  "version": "2.0.0",
+  "name": "crowd-dashboard",
+  "version": "2.1.0",
   "private": true,
+  "description": "Crowd dashboard, deployed on Vercel (Root Directory: v2/web). Data comes from the worker on etzal.",
   "scripts": {
-    "dev": "node server.js",
+    "dev": "next dev",
     "build": "next build",
-    "start": "node server.js"
+    "start": "next start"
   },
   "dependencies": {
     "lucide-react": "^1.66.0",
     "next": "^15.5.28",
-    "pg": "^8.23.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "recharts": "^3.10.1",
-    "ws": "^8.18.0"
+    "recharts": "^3.10.1"
   }
 }

@@ -1,0 +1,118 @@
+# CI for v2 (runs only when v2/ or this file changes; v1 is not affected).
+# Deployments are not done from here:
+#   v2/web    -> Vercel builds and deploys it from GitHub (Root Directory: v2/web)
+#   v2/worker -> etzal pulls the branch and releases it itself (v2/deploy/autodeploy.sh),
+#                running the same tests first and rolling back if the health check fails
+name: v2 CI
+
+on:
+  push:
+    paths: ["v2/**", ".github/workflows/v2-ci.yml"]
+  pull_request:
+    paths: ["v2/**", ".github/workflows/v2-ci.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v2-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  worker:
+    name: worker tests (with Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: crowd
+          POSTGRES_PASSWORD: crowd
+          POSTGRES_DB: crowd
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U crowd"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: v2/worker
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: v2/worker/package-lock.json
+      - run: npm ci
+      - run: npm test
+        env:
+          TEST_DATABASE_URL: postgresql://crowd:crowd@localhost:5432/crowd
+
+  web:
+    name: web build (same as Vercel)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: v2/web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: v2/web/package-lock.json
+      - run: npm ci
+      - run: npx next build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_WORKER_URL: https://crowd-api.etzalgroup.com
+
+  edge:
+    name: laptop script -> worker, end to end (simulated camera)
+    runs-on: ubuntu-latest
+    env:
+      EDGE_TOKEN: ci-edge-token-0123456789
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: v2/worker/package-lock.json
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install (the simulated camera needs no YOLO)
+        run: |
+          npm ci --prefix v2/worker
+          pip install opencv-python-headless websocket-client python-dotenv pyserial
+      - name: Compile every edge file
+        run: python -m compileall -q v2/edge
+      - name: The laptop script streams video and status to the worker
+        run: |
+          (cd v2/worker && PORT=3020 node src/index.js > /tmp/worker.log 2>&1 &)
+          (cd v2/edge && CAMERA_SOURCE=sim SHOW_WINDOW=false ESP32_MODE=off \
+             WORKER_URL=http://127.0.0.1:3020 timeout -s INT 90 python main.py > /tmp/edge.log 2>&1 &)
+          s=""
+          for _ in $(seq 45); do
+            sleep 1
+            s=$(curl -s http://127.0.0.1:3020/live/status || true)
+            if echo "$s" | grep -q '"video":true'; then break; fi
+          done
+          echo "status: $s"
+          echo "$s" | grep -q '"online":true'
+          echo "$s" | grep -q '"video":true'
+          curl -sf http://127.0.0.1:3020/live/frame.jpg -o /tmp/frame.jpg
+          test "$(stat -c%s /tmp/frame.jpg)" -gt 2000
+      - name: Logs
+        if: always()
+        run: tail -n 30 /tmp/worker.log /tmp/edge.log || true
+
+  deploy-scripts:
+    name: deploy scripts (shellcheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: shellcheck v2/deploy/*.sh
+      - run: node --check v2/deploy/ecosystem.config.cjs

@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from "react";
 
-import { LIVE_URL } from "@/lib/constants";
+import { LIVE_URL, WORKER_URL } from "@/lib/constants";
 
 /**
- * Polls the hub's /live/status. online = the laptop is connected and sending status;
+ * Polls the worker's /live/status. online = the laptop is connected and sending status;
  * data.video = frames are arriving too (false while the phone camera is offline).
  */
 export default function useLiveStatus() {
   const [live, setLive] = useState({ online: false, data: null });
 
   useEffect(() => {
+    if (!WORKER_URL) return undefined;     // not configured: stay offline (useMetrics shows why)
     let cancelled = false;
     let timer;
 

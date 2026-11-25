@@ -2,7 +2,7 @@
 log_queue.py - INT-02 v2: logs the count every 10 s to the server's Postgres (replaces Neon).
 
 Rows are written to a small SQLite file on the laptop first (data/queue.db),
-then uploaded in batches to POST <HUB_URL>/api/logs. A row is deleted locally
+then uploaded in batches to POST <WORKER_URL>/api/logs. A row is deleted locally
 only after the server confirms it, so nothing is lost when the Wi-Fi drops or
 the laptop restarts. Every row has a unique event_id, so a retried upload is
 never stored twice. The laptop never holds the database password.
@@ -75,7 +75,7 @@ class LogQueue:
                 next_upload = now + config.LOG_INTERVAL_S
                 continue
             if not self._endpoint:
-                self.status = f"local only - {self._count(db)} rows queued (no HUB_URL)"
+                self.status = f"local only - {self._count(db)} rows queued (no WORKER_URL)"
                 next_upload = now + 30
                 continue
             try:

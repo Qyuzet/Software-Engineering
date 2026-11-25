@@ -2,7 +2,7 @@
 main.py - v2 edge script (runs on the laptop).
 
 Phone IP Webcam -> YOLOv8 count -> crowd rule -> ESP32 (LEDs + buzzer)
-                                             -> server hub (live video + status for the website)
+                                             -> worker on etzal (live video + status for the website)
                                              -> log queue (Postgres on the server, every 10 s)
 
 Run:   python main.py               (settings in v2/edge/.env, falls back to the root .env)
@@ -48,7 +48,7 @@ def main():
     count, people = 0, []
 
     print(f"Running. Camera: {config.CAMERA_SOURCE} | ESP32: {config.ESP32_MODE} | "
-          f"Hub: {config.HUB_URL or 'off'} | Window: {'on' if config.SHOW_WINDOW else 'off'}")
+          f"Worker: {config.HUB_URL or 'off'} | Window: {'on' if config.SHOW_WINDOW else 'off'}")
     try:
         while True:
             frame_id, frame = camera.read(frame_id, timeout=1.0)

@@ -1,0 +1,19 @@
+{
+  "name": "crowd-worker",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Runs on etzal: live video relay, dashboard API and log ingest into Postgres",
+  "type": "module",
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "pg": "^8.23.1",
+    "ws": "^8.18.0"
+  }
+}
