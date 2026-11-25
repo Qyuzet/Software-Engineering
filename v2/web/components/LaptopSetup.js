@@ -3,8 +3,10 @@
 // "This laptop" page: talks to the laptop app (panel.py on 127.0.0.1:8765) from this browser.
 // Not installed -> what this laptop needs + the one-line installer + the cameras the browser can see.
 // Installed     -> requirements check, webcams with pictures, camera choice, start/stop detection.
+// Invite link   -> /laptop#join=<token>: the token is kept in this browser until the laptop app runs,
+//                  then saved into it, so a teammate never has to paste anything.
 
-import { ArrowLeft, Camera, CheckCircle2, CircleAlert, Copy, Laptop, Loader2, Play, Square, XCircle } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle2, CircleAlert, Copy, Laptop, Link2, Loader2, Play, Square, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -23,6 +25,18 @@ async function localAccessPermission() {
     }
   }
   return null;
+}
+
+const JOIN_KEY = "crowd.join";
+
+// Moves the token from an invite link (#join=...) into this browser's storage and out of the address bar
+function takeInvite() {
+  const m = window.location.hash.match(/(?:^#|&)join=([A-Za-z0-9_-]{8,128})(?:&|$)/);
+  if (m) {
+    localStorage.setItem(JOIN_KEY, m[1]);
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+  return !!localStorage.getItem(JOIN_KEY);
 }
 
 async function agent(path, body, timeoutMs = 8000) {
@@ -95,6 +109,32 @@ function BrowserCameras() {
   );
 }
 
+function InviteNote({ invite }) {
+  if (!invite) return null;
+  if (invite === "pending") {
+    return (
+      <section className={`${styles.card} ${styles.wide} ${styles.good}`}>
+        <h2><Link2 size={18} /> Invite received</h2>
+        <p>Start or install the laptop app below. This laptop joins by itself as soon as the app runs: nothing to paste.</p>
+      </section>
+    );
+  }
+  if (invite === "joined") {
+    return (
+      <section className={`${styles.card} ${styles.wide} ${styles.good}`}>
+        <h2><CheckCircle2 size={18} /> This laptop has joined</h2>
+        <p>It may now stream to the dashboard. Pick a camera below and press <b>Start detection</b>.</p>
+      </section>
+    );
+  }
+  return (
+    <section className={`${styles.card} ${styles.wide} ${styles.ask}`}>
+      <h2>The invite could not be saved</h2>
+      <p>{invite}. Ask for a new invite link, or paste the token under Requirements.</p>
+    </section>
+  );
+}
+
 function NotConnected({ checking, permission }) {
   if (permission === "prompt") {
     return (
@@ -142,7 +182,7 @@ function NotConnected({ checking, permission }) {
           <Row warn title="Python 3.9+">installed by the command above when missing.</Row>
           <Row warn title="Packages">YOLO (ultralytics + torch), OpenCV, pyserial, websocket-client, python-dotenv &ndash; installed by the command.</Row>
           <Row warn title="A camera">a webcam, or an Android phone with the IP Webcam app on the same Wi-Fi.</Row>
-          <Row warn title="Edge token">ask the admin; paste it here or in the app once.</Row>
+          <Row warn title="Invite link">from a teammate whose laptop is set up (laptop app &rarr; Copy invite link). Open it on this laptop.</Row>
           <Row warn title="ESP32 (optional)">lights and buzzer, by Wi-Fi or USB cable.</Row>
         </ul>
         <BrowserCameras />
@@ -161,6 +201,14 @@ function Requirements({ sys, onChanged }) {
     try { await agent("/api/settings", { edge_token: token.trim() }); setToken(""); setMsg("Token saved."); onChanged(await agent("/api/system")); }
     catch (err) { setMsg(err.message); }
   }
+  async function copyInvite() {
+    try {
+      const { link } = await agent("/api/invite");
+      await navigator.clipboard.writeText(link);
+      setMsg("Invite link copied. Send it to the teammate; they open it on their laptop and it sets itself up. "
+        + "Anyone with the link can stream to the dashboard, so keep it in the team.");
+    } catch (err) { setMsg(err.message); }
+  }
   return (
     <section className={styles.card}>
       <h2>Requirements</h2>
@@ -171,7 +219,9 @@ function Requirements({ sys, onChanged }) {
           <Row key={p.name} ok={!!p.version} title={p.name}>{p.version ? `${p.version} - ${p.why}` : `missing - ${p.why}`}</Row>
         ))}
         <Row ok={sys.model.present} warn={!sys.model.present} title="YOLO model">{sys.model.present ? "present" : sys.model.note}</Row>
-        <Row ok={sys.token_set} title="Edge token">{sys.token_set ? "set" : "missing: paste the token from the admin"}</Row>
+        <Row ok={sys.token_set} title="Edge token">
+          {sys.token_set ? "set" : "missing: open the invite link from a teammate on this laptop, or paste the token below"}
+        </Row>
       </ul>
       {sys.missing.length > 0 && (
         <button className={styles.btnPrimary} disabled={sys.installing} onClick={install}>
@@ -179,7 +229,11 @@ function Requirements({ sys, onChanged }) {
         </button>
       )}
       {(sys.installing || sys.install_log.length > 0) && <pre className={styles.log}>{sys.install_log.join("\n")}</pre>}
-      {!sys.token_set && (
+      {sys.token_set ? (
+        <div className={styles.inline}>
+          <button className={styles.btn} onClick={copyInvite}><Link2 size={15} /> Copy invite link for another laptop</button>
+        </div>
+      ) : (
         <div className={styles.inline}>
           <input type="password" placeholder="Edge token" value={token} onChange={(e) => setToken(e.target.value)} />
           <button className={styles.btn} disabled={!token.trim()} onClick={saveToken}>Save token</button>
@@ -296,6 +350,7 @@ export default function LaptopSetup() {
   const [sys, setSys] = useState(null);
   const [state, setState] = useState(null);
   const [permission, setPermission] = useState(null);   // prompt | granted | denied | null (not asked by this browser)
+  const [invite, setInvite] = useState(null);           // null | pending | joined | error text
   const first = useRef(true);
 
   const refresh = useCallback(async () => {
@@ -305,11 +360,25 @@ export default function LaptopSetup() {
       setSys(s); setState(st); setStatus("connected");
     } catch {
       setStatus("missing");
+      first.current = false;
+      return;
     }
     first.current = false;
+    const join = localStorage.getItem(JOIN_KEY);
+    if (join) {                            // invite link opened on this laptop: hand the token to the app
+      localStorage.removeItem(JOIN_KEY);
+      try {
+        await agent("/api/settings", { edge_token: join });
+        setSys(await agent("/api/system"));
+        setInvite("joined");
+      } catch (err) {
+        setInvite(err.message);
+      }
+    }
   }, []);
 
   useEffect(() => {
+    if (takeInvite()) setInvite("pending");
     let timer;
     let stopped = false;
     let perm = null;
@@ -345,6 +414,7 @@ export default function LaptopSetup() {
         </span>
       </header>
       <main className={styles.main}>
+        <InviteNote invite={invite} />
         {status === "connected" && sys && state ? (
           <>
             <Requirements sys={sys} onChanged={(s) => setSys(s)} />

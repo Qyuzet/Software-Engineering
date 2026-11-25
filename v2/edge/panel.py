@@ -166,6 +166,14 @@ def _updates_from(s):
     return up
 
 
+def invite_link():
+    """A link for another laptop: opened there, the website saves this laptop's token into its laptop app.
+    The token goes after '#', so it never reaches the web server or its logs."""
+    token = (_values().get("EDGE_TOKEN") or "").strip()
+    _need(token, "This laptop has no edge token yet, so there is nothing to share.")
+    return {"link": f"{DASHBOARD}/laptop#join={token}"}
+
+
 def _format(value):
     return f'"{value}"' if re.search(r"\s", value) else value
 
@@ -533,6 +541,8 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/snapshot":
                 webcam = int(params["webcam"]) if params.get("webcam", "").isdigit() else None
                 return self._send(200, snapshot(webcam), "image/jpeg")
+            if path == "/api/invite":
+                return self._send(200, invite_link())
             return self._send(404, {"error": "Not found"})
         except (BadRequest, esp32_setup.SetupError) as err:
             return self._send(400, {"error": str(err)})

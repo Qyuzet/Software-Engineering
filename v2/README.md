@@ -111,15 +111,24 @@ adds more), and only listens on 127.0.0.1.
 
 ### A new laptop
 
-Open https://crowd.etzalgroup.com/laptop: it lists what the laptop needs. Then in PowerShell:
+1. Someone whose laptop is already set up clicks **Copy invite link** (laptop app → Run, or
+   `/laptop` → Requirements) and sends it to you.
+2. Open the invite link on the new laptop. The page lists what the laptop needs. Then in PowerShell:
 
-```powershell
-irm https://crowd.etzalgroup.com/install.ps1 | iex
-```
+   ```powershell
+   irm https://crowd.etzalgroup.com/install.ps1 | iex
+   ```
 
-It installs Python 3.12 if missing (winget, no admin), downloads `v2/edge` from GitHub into
-`%LOCALAPPDATA%\CrowdControl\edge`, installs the packages (about 1 GB), adds **Crowd Laptop** to the
-desktop and starts it. Run it again to update; settings are kept. Then paste the edge token once:
+   It installs Python 3.12 if missing (winget, no admin), downloads `v2/edge` from GitHub into
+   `%LOCALAPPDATA%\CrowdControl\edge`, installs the packages (about 1 GB), adds **Crowd Laptop** to the
+   desktop and starts it. Run it again to update; settings are kept.
+3. The invite page connects to the app by itself and saves the edge token into it. Nothing to paste.
+
+The invite link is `https://crowd.etzalgroup.com/laptop#join=<EDGE_TOKEN>`: the part after `#` never
+reaches Vercel, and the page removes it from the address bar. Anyone with the link can stream to the
+dashboard, so share it only with the team. To cut everyone off, put a new `EDGE_TOKEN` in
+`~/crowd-intelligent/worker.env`, `pm2 restart crowd-worker`, and send a new invite link.
+The very first laptop gets the token from the server:
 `ssh -p 2222 mydebian 'grep EDGE_TOKEN ~/crowd-intelligent/worker.env'`
 
 ### ESP32 Wi-Fi without re-flashing

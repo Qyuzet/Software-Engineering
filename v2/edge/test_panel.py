@@ -68,6 +68,14 @@ class PanelTest(unittest.TestCase):
         s = json.loads(body)["settings"]
         self.assertEqual((s["camera"], s["webcam_index"], s["phone_ip"]), ("webcam", 1, "10.31.176.62"))
 
+    def test_invite_link_carries_the_token_after_the_hash(self):
+        self.call("/api/settings", {"camera": "sim", "esp32_mode": "off",
+                                    "worker_url": "https://crowd-api.etzalgroup.com", "edge_token": "invite12345678"})
+        code, _, body = self.call("/api/invite", headers={"Origin": DASHBOARD})
+        self.assertEqual(code, 200, body)
+        self.assertEqual(json.loads(body)["link"], f"{DASHBOARD}/laptop#join=invite12345678")
+        self.assertEqual(self.call("/api/invite", headers={"Origin": "https://evil.example"})[0], 403)
+
     def test_bad_values_are_refused_with_a_reason(self):
         for change in ({"camera": "phone", "phone_ip": "not an ip!"}, {"crowd_limit": 0},
                        {"camera": "url", "camera_url": "file:///etc/passwd"}, {"edge_token": "x y"}):

@@ -21,7 +21,8 @@ import config
 
 DASHBOARD = "https://crowd.etzalgroup.com"
 UA = {"User-Agent": "crowd-edge/2.0"}
-TOKEN_HELP = "ssh -p 2222 mydebian 'grep EDGE_TOKEN ~/crowd-intelligent/worker.env'"
+TOKEN_HELP = ("Ask a teammate whose laptop is set up for the invite link (laptop app -> Copy invite link) "
+              "and open it on this laptop, or paste the token in Run -> Server -> Edge token.")
 
 
 def _get(url, timeout=4, data=None, headers=None):
@@ -103,8 +104,7 @@ def check_worker():
 
 def check_token():
     if not config.EDGE_TOKEN:
-        return "fail", ("not set on this laptop yet (needed once). Paste it in the laptop app: Run -> Server -> "
-                        f"Edge token, then Save. The admin gets it with:  {TOKEN_HELP}")
+        return "fail", f"not set on this laptop yet (needed once). {TOKEN_HELP}"
     try:
         with _get(f"{config.HUB_URL}/api/logs", data=b'{"rows": []}',
                   headers={"Content-Type": "application/json", "x-api-key": config.EDGE_TOKEN}):
@@ -114,8 +114,7 @@ def check_token():
         if err.code == 503:
             return "ok", "accepted (but the worker has no database)"
         if err.code == 401:
-            return "fail", ("the server does not accept this token. Paste the right one in the laptop app: "
-                            f"Run -> Server -> Edge token. The admin gets it with:  {TOKEN_HELP}")
+            return "fail", f"the server does not accept this token. {TOKEN_HELP}"
         return "fail", f"HTTP {err.code}"
     except Exception as err:  # noqa: BLE001
         return "fail", f"could not test ({_why(err)})"

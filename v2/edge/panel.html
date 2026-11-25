@@ -177,6 +177,11 @@
         <div><label for="token">Edge token <span id="tokenState" class="hint"></span></label><input id="token" type="password" placeholder="leave empty to keep it" autocomplete="off"></div>
       </div>
     </details>
+    <div class="btns" id="inviteRow" hidden>
+      <button class="btn" id="invite">Copy invite link for another laptop</button>
+      <span class="hint">Send it to a teammate: opening it on their laptop sets it up, nothing to paste. Anyone with the link can stream to the dashboard.</span>
+    </div>
+    <div class="msg" id="inviteMsg"></div>
     <div class="btns">
       <button class="btn" id="save">Save</button>
       <button class="btn" id="check">Check everything</button>
@@ -286,7 +291,8 @@ function fillForm(s) {
   $("espHost").value = s.esp32_host;
   $("limit").value = s.crowd_limit; $("site").value = s.site_name; $("showWindow").checked = s.show_window;
   $("workerUrl").value = s.worker_url;
-  $("tokenState").textContent = s.token_set ? "(set)" : "(missing - needed once, ask the admin)";
+  $("tokenState").textContent = s.token_set ? "(set)" : "(missing - open the invite link from a teammate on this laptop, or paste the token)";
+  $("inviteRow").hidden = !s.token_set;
   if (!s.token_set) {                       // first run on this laptop: show where the token goes
     $("serverBox").open = true;
     $("token").placeholder = "paste the edge token here, then Save";
@@ -398,6 +404,14 @@ $("findWebcams").onclick = (e) => run(e.target, async () => {
   try { const list = await api("/api/webcams"); fillWebcams(list, list[0]?.index ?? 0);
         msg("cameraMsg", list.length ? `Found ${list.length} webcam(s).` : "No webcam found.", list.length ? "ok" : "bad"); }
   catch (err) { msg("cameraMsg", err.message, "bad"); }
+});
+
+$("invite").onclick = (e) => run(e.target, async () => {
+  try {
+    const { link } = await api("/api/invite");
+    await navigator.clipboard.writeText(link);
+    msg("inviteMsg", "Invite link copied. Send it to the teammate; they open it on their laptop.", "ok");
+  } catch (err) { msg("inviteMsg", err.message, "bad"); }
 });
 
 $("refreshPorts").onclick = loadPorts;
