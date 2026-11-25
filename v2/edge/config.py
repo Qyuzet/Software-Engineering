@@ -51,8 +51,9 @@ ESP32_MODE = {"usb": "serial"}.get(os.getenv("ESP32_MODE", "off").strip().lower(
                                     os.getenv("ESP32_MODE", "off").strip().lower())
 SERIAL_PORT = os.getenv("SERIAL_PORT", "COM3")
 SERIAL_BAUD = 115200
-ESP32_HOST = os.getenv("ESP32_HOST", "") or os.getenv("ESP32_IP", "192.168.1.50")
-ESP32_PORT = int(os.getenv("ESP32_PORT", "80"))
+# ESP32_HOST may include a port: 10.31.176.176 or 10.31.176.176:8080
+ESP32_HOST, _, _esp32_port = (os.getenv("ESP32_HOST", "") or os.getenv("ESP32_IP", "192.168.1.50")).strip().partition(":")
+ESP32_PORT = int(_esp32_port or os.getenv("ESP32_PORT", "80"))
 ESP32_TIMEOUT_S = 0.5
 RESEND_EVERY_S = 2.0
 RECONNECT_EVERY_S = 3.0

@@ -1,6 +1,7 @@
 "use client";
 
 import { VideoOff } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { LIVE_URL } from "@/lib/constants";
@@ -44,8 +45,8 @@ export default function CameraPanel({ live, site }) {
               <>
                 <p>Camera offline</p>
                 <small>
-                  Start the edge script on the laptop: <code>python v2/edge/main.py</code>
-                  {" "}(or <code>CAMERA_SOURCE=sim</code> without a camera)
+                  Start detection on the laptop: open <Link href="/laptop">This laptop</Link>
+                  {" "}(or double-click <code>Crowd Laptop</code> on its desktop).
                 </small>
               </>
             )}

@@ -11,6 +11,7 @@ Keys (only with SHOW_WINDOW=true):  q = quit,  + / - = raise or lower the crowd 
 Ctrl+C stops it in headless mode.
 """
 
+import signal
 import time
 
 import cv2
@@ -108,4 +109,7 @@ def main():
 
 
 if __name__ == "__main__":
+    if hasattr(signal, "SIGBREAK"):
+        # Windows: the control panel stops detection with Ctrl+Break; shut down cleanly like Ctrl+C
+        signal.signal(signal.SIGBREAK, signal.default_int_handler)
     main()

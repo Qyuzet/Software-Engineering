@@ -1,11 +1,12 @@
 "use client";
 
-import { BarChart3, CircleUserRound, LayoutDashboard, Maximize, Settings } from "lucide-react";
+import { BarChart3, CircleUserRound, LaptopMinimal, LayoutDashboard, Maximize } from "lucide-react";
+import Link from "next/link";
 
 const ACTIONS = [
   { label: "Dashboard", icon: LayoutDashboard, active: true },
   { label: "Reports", icon: BarChart3 },
-  { label: "Settings", icon: Settings },
+  { label: "Laptop", icon: LaptopMinimal, href: "/laptop" },
   { label: "Fullscreen", icon: Maximize, fullscreen: true },
   { label: "Account", icon: CircleUserRound },
 ];
@@ -32,7 +33,12 @@ export default function SiteHeader({ site }) {
       </div>
 
       <div className="header-actions">
-        {ACTIONS.map(({ label, icon: Icon, active, fullscreen }) => (
+        {ACTIONS.map(({ label, icon: Icon, active, fullscreen, href }) => href ? (
+          <Link key={label} href={href} className="header-action" title="Set up this laptop: camera, requirements, start/stop">
+            <Icon size={18} />
+            <span>{label}</span>
+          </Link>
+        ) : (
           <button key={label}
                   className={`header-action ${active ? "active" : ""}`}
                   disabled={!active && !fullscreen}

@@ -1,0 +1,73 @@
+.page { min-height: 100vh; background: var(--bg); }
+
+.header {
+  display: flex; align-items: center; gap: 16px; padding: 12px 24px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.header h1 { display: flex; align-items: center; gap: 8px; font-size: 18px; margin: 0; flex: 1; }
+.back { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-size: 14px; }
+.back:hover { color: var(--text); }
+.pill, .pillOn { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.pill { background: var(--track); color: var(--muted); }
+.pillOn { background: var(--teal); color: #fff; }
+
+.main {
+  max-width: 1100px; margin: 0 auto; padding: 20px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; align-items: start;
+}
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; }
+.card h2 { font-size: 16px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+.wide { grid-column: 1 / -1; }
+.muted { color: var(--muted); font-size: 13px; margin: 6px 0 12px; }
+.muted code, .steps code { font-size: 12px; background: var(--grid); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.badText { color: var(--red); font-size: 13px; }
+
+.steps { padding-left: 20px; margin: 8px 0 0; display: grid; gap: 12px; font-size: 14px; line-height: 1.5; }
+.command {
+  display: flex; align-items: center; gap: 10px; margin: 8px 0; padding: 10px 12px;
+  background: #1f2428; color: #e6edf3; border-radius: 6px;
+}
+.command code { flex: 1; font-size: 13px; overflow-wrap: anywhere; }
+
+.list { list-style: none; padding: 0; margin: 4px 0 14px; }
+.row { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid var(--grid); font-size: 13.5px; }
+.row:first-child { border-top: 0; }
+.row div { display: flex; flex-direction: column; }
+.row span { color: var(--muted); }
+.ok { color: var(--green); flex: none; margin-top: 1px; }
+.warn { color: var(--orange); flex: none; margin-top: 1px; }
+.bad { color: var(--red); flex: none; margin-top: 1px; }
+.plain { margin: 10px 0 0; padding-left: 18px; font-size: 14px; }
+
+.btn, .btnPrimary {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none;
+}
+.btnPrimary { background: var(--teal); border-color: var(--teal); color: #fff; }
+.btn:disabled, .btnPrimary:disabled { opacity: .55; cursor: default; }
+.btn:hover:not(:disabled) { border-color: var(--grey-line); }
+.command .btn { background: transparent; color: #e6edf3; border-color: #4b535a; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.inline { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.inline input {
+  flex: 1 1 180px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 13px;
+}
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+.cam { margin: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.cam img, .noPic { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #111; }
+.noPic { display: grid; place-items: center; color: #888; font-size: 12px; }
+.cam figcaption { display: flex; align-items: center; gap: 6px; padding: 6px 8px; font-size: 13px; font-weight: 600; }
+.cam figcaption span { color: var(--muted); font-weight: 400; flex: 1; font-size: 12px; }
+
+.log {
+  background: #1f2428; color: #cfd8df; border-radius: 6px; padding: 10px 12px; max-height: 220px; overflow: auto;
+  font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; margin: 10px 0 0;
+}
+.on, .off { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.on { background: var(--teal); color: #fff; }
+.off { background: var(--track); color: var(--muted); }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

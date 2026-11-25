@@ -89,6 +89,8 @@ jobs:
           pip install opencv-python-headless websocket-client python-dotenv pyserial
       - name: Compile every edge file
         run: python -m compileall -q v2/edge
+      - name: Control panel tests (settings file, website access rules)
+        run: python -m unittest discover -s v2/edge -p "test_*.py" -v
       - name: The laptop script streams video and status to the worker
         run: |
           (cd v2/worker && PORT=3020 node src/index.js > /tmp/worker.log 2>&1 &)

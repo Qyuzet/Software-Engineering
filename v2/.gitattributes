@@ -1,2 +1,4 @@
 # Shell scripts run on Linux (etzal): keep LF even on Windows checkouts
 *.sh text eol=lf
+# Batch files need CRLF for cmd.exe
+*.bat text eol=crlf

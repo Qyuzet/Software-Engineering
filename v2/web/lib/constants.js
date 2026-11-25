@@ -7,3 +7,8 @@ export const NEAR_LIMIT_RATIO = 0.8;      // "near limit" = at least 80% of the 
 export const WORKER_URL = (process.env.NEXT_PUBLIC_WORKER_URL || "").trim().replace(/\/+$/, "");
 export const LIVE_URL = `${WORKER_URL}/live`;
 export const API_URL = `${WORKER_URL}/api`;
+
+// The laptop app (v2/edge/panel.py) on the computer that opens the dashboard. Only this website
+// and the panel itself may use it; the browser may ask to allow access to apps on this device.
+export const AGENT_URL = "http://127.0.0.1:8765";
+export const INSTALL_COMMAND = "irm https://crowd.etzalgroup.com/install.ps1 | iex";

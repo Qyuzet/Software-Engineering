@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crowd Control · Laptop panel</title>
+<style>
+  :root {
+    --bg: #f2f4f6; --card: #fff; --ink: #1b2228; --muted: #5d6873; --line: #dde2e7;
+    --accent: #1f7a46; --accent-ink: #fff; --bad: #b3261e; --warn: #9a6700; --head: #14191e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+  header { background: var(--head); color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 2; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 650; }
+  header .sub { color: #9aa6b1; font-size: 13px; }
+  header .grow { flex: 1; }
+  header a { color: #cfe8d8; text-decoration: none; font-size: 13px; }
+  .pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #39424b; color: #dfe5ea; }
+  .pill.on { background: #1f7a46; color: #fff; }
+  main { max-width: 1180px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; align-items: start; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+  .card.wide { grid-column: 1 / -1; }
+  h2 { font-size: 15px; margin: 0 0 2px; }
+  .hint { color: var(--muted); font-size: 12.5px; margin: 4px 0 0; }
+  .step { color: var(--muted); font-weight: 500; margin-right: 6px; }
+  label { display: block; font-size: 12.5px; font-weight: 600; margin: 12px 0 4px; color: #333d46; }
+  input[type=text], input[type=number], input[type=password], select {
+    width: 100%; padding: 8px 10px; font: inherit; border: 1px solid #c7cfd6; border-radius: 8px; background: #fff; color: inherit;
+  }
+  input:focus, select:focus, button:focus-visible { outline: 2px solid #8cc7a3; outline-offset: 1px; }
+  .row { display: flex; gap: 10px; align-items: end; }
+  .row > * { flex: 1; }
+  .row > .narrow { flex: 0 0 110px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .seg button { flex: 1 1 auto; padding: 8px 10px; border: 1px solid #c7cfd6; background: #fff; color: #333d46; border-radius: 8px; font: inherit; font-weight: 600; cursor: pointer; }
+  .seg button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .btn { padding: 8px 14px; border-radius: 8px; border: 1px solid #c7cfd6; background: #fff; font: inherit; font-weight: 600; cursor: pointer; color: var(--ink); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.danger { color: var(--bad); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .msg { margin-top: 10px; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: #eef2f5; display: none; white-space: pre-line; }
+  .msg.show { display: block; }
+  .msg.ok { background: #e4f3ea; color: #155c34; }
+  .msg.bad { background: #fbe9e7; color: #8c1d18; }
+  .preview { margin-top: 10px; width: 100%; border-radius: 8px; background: #0f1418; display: none; }
+  .checks { list-style: none; padding: 0; margin: 10px 0 0; }
+  .checks li { display: flex; gap: 10px; padding: 6px 0; border-top: 1px solid #eef1f3; font-size: 13px; }
+  .checks li:first-child { border-top: 0; }
+  .tag { flex: 0 0 46px; text-align: center; font-weight: 700; font-size: 11px; border-radius: 6px; padding: 2px 0; height: fit-content; }
+  .tag.ok { background: #e4f3ea; color: #155c34; } .tag.fail { background: #fbe9e7; color: #8c1d18; }
+  .tag.warn { background: #fff4d6; color: #7a5300; } .tag.skip { background: #eef1f3; color: #5d6873; }
+  .checks b { flex: 0 0 64px; }
+  .live { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .live { grid-template-columns: 1fr; } }
+  .video { background: #0f1418; border-radius: 10px; aspect-ratio: 16 / 9; display: grid; place-items: center; color: #8b97a1; overflow: hidden; }
+  .video img { width: 100%; height: 100%; object-fit: contain; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .stat span { display: block; font-size: 11.5px; color: var(--muted); }
+  .stat b { font-size: 15px; overflow-wrap: anywhere; }
+  pre.log { background: #11171c; color: #cfd8df; border-radius: 8px; padding: 10px 12px; height: 220px; overflow: auto; font: 12px/1.45 ui-monospace, Consolas, monospace; margin: 12px 0 0; white-space: pre-wrap; }
+  details summary { cursor: pointer; font-weight: 600; margin-top: 12px; }
+  .banner { display: none; margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: #fff4d6; color: #5c3f00; font-size: 13px; }
+  .banner.show { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+  .check-inline { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; }
+  .check-inline input { width: auto; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Crowd Control · Laptop panel</h1>
+    <div class="sub">Camera, ESP32 and detection on this laptop</div>
+  </div>
+  <div class="grow"></div>
+  <span class="pill" id="runPill">Stopped</span>
+  <a id="dashLink" href="https://crowd.etzalgroup.com" target="_blank" rel="noopener">Open dashboard ↗</a>
+</header>
+
+<main>
+  <!-- 1. Camera -->
+  <section class="card">
+    <h2><span class="step">1</span>Camera</h2>
+    <p class="hint">Where the video comes from.</p>
+    <div class="seg" id="cameraSeg">
+      <button data-v="phone">Phone (IP Webcam)</button>
+      <button data-v="webcam">Laptop webcam</button>
+      <button data-v="sim">Simulation</button>
+      <button data-v="url">Other URL</button>
+    </div>
+    <div data-cam="phone">
+      <div class="row">
+        <div><label for="phoneIp">Phone IP</label><input id="phoneIp" type="text" placeholder="10.31.176.62" autocomplete="off"></div>
+        <div class="narrow"><label for="phonePort">Port</label><input id="phonePort" type="number" min="1" max="65535"></div>
+      </div>
+      <p class="hint">In the IP Webcam app tap <b>Start server</b>; it shows <code>http://IP:8080</code>. Phone and laptop on the same Wi-Fi or hotspot.</p>
+    </div>
+    <div data-cam="webcam">
+      <div class="row">
+        <div><label for="webcamIndex">Webcam</label><select id="webcamIndex"></select></div>
+        <div class="narrow"><button class="btn" id="findWebcams" style="width:100%">Find</button></div>
+      </div>
+    </div>
+    <div data-cam="sim"><p class="hint" style="margin-top:12px">Fake people walking around, no camera or YOLO needed. Good for testing the website and the ESP32.</p></div>
+    <div data-cam="url">
+      <label for="cameraUrl">Stream URL</label>
+      <input id="cameraUrl" type="text" placeholder="http://192.168.1.20:8080/video  or  rtsp://..." autocomplete="off">
+    </div>
+    <div class="btns"><button class="btn" id="testCamera">Test camera</button></div>
+    <div class="msg" id="cameraMsg"></div>
+    <img class="preview" id="cameraPreview" alt="Test picture from the camera">
+  </section>
+
+  <!-- 2. ESP32 -->
+  <section class="card">
+    <h2><span class="step">2</span>ESP32 (lights + buzzer)</h2>
+    <p class="hint">How the laptop sends CROWDED / NORMAL to the ESP32.</p>
+    <div class="seg" id="espSeg">
+      <button data-v="wifi">Wi-Fi</button>
+      <button data-v="usb">USB cable</button>
+      <button data-v="off">Off</button>
+    </div>
+    <div data-esp="wifi">
+      <label for="espHost">ESP32 address</label>
+      <input id="espHost" type="text" placeholder="10.31.176.176" autocomplete="off">
+    </div>
+    <div data-esp="usb portpick">
+      <div class="row">
+        <div><label for="serialPort">USB port</label><select id="serialPort"></select></div>
+        <div class="narrow"><button class="btn" id="refreshPorts" style="width:100%">Refresh</button></div>
+      </div>
+    </div>
+    <div class="btns"><button class="btn" id="testEsp">Test ESP32</button></div>
+    <div class="msg" id="espMsg"></div>
+
+    <details id="wifiBox">
+      <summary>Set the ESP32's Wi-Fi network</summary>
+      <p class="hint">Use the same Wi-Fi or hotspot as the laptop (2.4 GHz). Needs the v2 firmware flashed once.</p>
+      <div class="row">
+        <div><label for="ssid">Wi-Fi name</label><input id="ssid" type="text" maxlength="32" autocomplete="off"></div>
+        <div><label for="wifiPass">Password</label><input id="wifiPass" type="password" maxlength="63" autocomplete="new-password"></div>
+      </div>
+      <div class="seg" id="viaSeg">
+        <button data-v="usb">Send over USB cable</button>
+        <button data-v="wifi">Send over Wi-Fi</button>
+      </div>
+      <div data-via="usb">
+        <div class="row">
+          <div><label for="viaPort">USB port</label><select id="viaPort"></select></div>
+          <div class="narrow"><button class="btn" id="refreshPorts2" style="width:100%">Refresh</button></div>
+        </div>
+        <p class="hint">Best way: the ESP32 joins the network and tells the panel its new address.</p>
+      </div>
+      <div data-via="wifi"><p class="hint" style="margin-top:12px">Sent to the address above. The ESP32 then leaves its current network.</p></div>
+      <div class="btns"><button class="btn primary" id="sendWifi">Send to ESP32</button></div>
+      <div class="msg" id="wifiMsg"></div>
+      <p class="hint" style="margin-top:12px">No cable? Power the ESP32: after 30 s without Wi-Fi it opens the hotspot
+        <b>Crowd-ESP32-XXXX</b> (password <b>crowd1234</b>). Join it with your phone and the setup page opens.</p>
+    </details>
+  </section>
+
+  <!-- 3. Run -->
+  <section class="card wide">
+    <h2><span class="step">3</span>Run</h2>
+    <div class="row">
+      <div class="narrow"><label for="limit">Crowd limit</label><input id="limit" type="number" min="1" max="500"></div>
+      <div><label for="site">Room name</label><input id="site" type="text" maxlength="60"></div>
+    </div>
+    <label class="check-inline"><input id="showWindow" type="checkbox"> Also show the video window on this laptop</label>
+    <details>
+      <summary>Server</summary>
+      <div class="row">
+        <div><label for="workerUrl">Worker URL</label><input id="workerUrl" type="text" autocomplete="off"></div>
+        <div><label for="token">Edge token <span id="tokenState" class="hint"></span></label><input id="token" type="password" placeholder="leave empty to keep it" autocomplete="off"></div>
+      </div>
+    </details>
+    <div class="btns">
+      <button class="btn" id="save">Save</button>
+      <button class="btn" id="check">Check everything</button>
+      <button class="btn primary" id="start">▶ Start detection</button>
+      <button class="btn danger" id="stop">■ Stop</button>
+    </div>
+    <div class="msg" id="runMsg"></div>
+    <div class="banner" id="restartBanner"><span>Settings changed while running. Restart to use them.</span><button class="btn" id="restart">Restart</button></div>
+    <ul class="checks" id="checks"></ul>
+
+    <div class="live" style="margin-top:16px">
+      <div class="video" id="video"><span id="videoText">Not running</span></div>
+      <div>
+        <div class="stats">
+          <div class="stat"><span>People</span><b id="sCount">-</b></div>
+          <div class="stat"><span>State</span><b id="sState">-</b></div>
+          <div class="stat"><span>Camera</span><b id="sCamera">-</b></div>
+          <div class="stat"><span>ESP32</span><b id="sEsp">-</b></div>
+          <div class="stat"><span>Database</span><b id="sDb">-</b></div>
+          <div class="stat"><span>Speed</span><b id="sFps">-</b></div>
+        </div>
+        <p class="hint">Same view as the dashboard: the video goes through the worker.</p>
+      </div>
+    </div>
+    <pre class="log" id="log"></pre>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let S = null;              // settings from the panel
+let running = false;
+let liveTimer = null;
+let streamOn = false;
+
+async function api(path, body) {
+  const opts = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const res = await fetch(path, opts);
+  const ctype = res.headers.get("Content-Type") || "";
+  const data = ctype.includes("json") ? await res.json() : await res.blob();
+  if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
+  return data;
+}
+
+function msg(id, text, kind) {
+  const el = $(id);
+  el.textContent = text || "";
+  el.className = "msg" + (text ? " show" : "") + (kind ? " " + kind : "");
+}
+
+function seg(id, value, onPick) {
+  const box = $(id);
+  for (const b of box.querySelectorAll("button")) {
+    b.classList.toggle("on", b.dataset.v === value);
+    b.onclick = () => { seg(id, b.dataset.v, onPick); onPick(b.dataset.v); };
+  }
+}
+const segValue = (id) => $(id).querySelector("button.on")?.dataset.v;
+
+function showCamera(v) { for (const el of document.querySelectorAll("[data-cam]")) el.hidden = el.dataset.cam !== v; }
+function showEsp(v) { for (const el of document.querySelectorAll("[data-esp]")) el.hidden = !el.dataset.esp.split(" ").includes(v); }
+function showVia(v) { for (const el of document.querySelectorAll("[data-via]")) el.hidden = el.dataset.via !== v; }
+
+function fillPorts(list, current) {
+  for (const sel of [$("serialPort"), $("viaPort")]) {
+    const keep = sel.value || current;
+    sel.textContent = "";
+    for (const p of list) {
+      const o = document.createElement("option");
+      o.value = p.device;
+      o.textContent = `${p.device} - ${p.description}` + (p.likely_esp32 ? "  (likely the ESP32)" : "");
+      sel.append(o);
+    }
+    if (keep && !list.some((p) => p.device === keep)) {
+      const o = document.createElement("option");
+      o.value = keep; o.textContent = `${keep} (not connected now)`;
+      sel.prepend(o);
+    }
+    sel.value = keep && [...sel.options].some((o) => o.value === keep) ? keep : (list[0]?.device || "");
+  }
+}
+
+async function loadPorts() {
+  try { fillPorts(await api("/api/ports"), S?.serial_port); } catch (e) { msg("espMsg", e.message, "bad"); }
+}
+
+function fillWebcams(list, current) {
+  const sel = $("webcamIndex");
+  sel.textContent = "";
+  const items = list.length ? list : [{ index: current ?? 0, size: "" }];
+  for (const c of items) {
+    const o = document.createElement("option");
+    o.value = c.index; o.textContent = `Camera ${c.index}` + (c.size ? ` (${c.size})` : "");
+    sel.append(o);
+  }
+  sel.value = String(current ?? items[0].index);
+  if (!sel.value) sel.value = String(items[0].index);
+}
+
+function fillForm(s) {
+  S = s;
+  seg("cameraSeg", s.camera, showCamera); showCamera(s.camera);
+  $("phoneIp").value = s.phone_ip; $("phonePort").value = s.phone_port;
+  fillWebcams([], s.webcam_index);
+  $("cameraUrl").value = s.camera_url;
+  seg("espSeg", s.esp32_mode, showEsp); showEsp(s.esp32_mode);
+  $("espHost").value = s.esp32_host;
+  $("limit").value = s.crowd_limit; $("site").value = s.site_name; $("showWindow").checked = s.show_window;
+  $("workerUrl").value = s.worker_url;
+  $("tokenState").textContent = s.token_set ? "(set)" : "(missing)";
+}
+
+function collect() {
+  return {
+    camera: segValue("cameraSeg"), phone_ip: $("phoneIp").value.trim(), phone_port: Number($("phonePort").value) || 8080,
+    webcam_index: Number($("webcamIndex").value) || 0, camera_url: $("cameraUrl").value.trim(),
+    esp32_mode: segValue("espSeg"), esp32_host: $("espHost").value.trim(), serial_port: $("serialPort").value,
+    crowd_limit: Number($("limit").value) || 10, site_name: $("site").value.trim(), show_window: $("showWindow").checked,
+    worker_url: $("workerUrl").value.trim(), edge_token: $("token").value.trim(),
+  };
+}
+
+async function save(quiet) {
+  const st = await api("/api/settings", collect());
+  $("token").value = "";
+  applyState(st, true);
+  if (!quiet) msg("runMsg", "Saved to " + st.env_file, "ok");
+  return st;
+}
+
+function renderChecks(r) {
+  const ul = $("checks");
+  ul.textContent = "";
+  for (const c of r.checks) {
+    const li = document.createElement("li");
+    const tag = document.createElement("span"); tag.className = "tag " + c.state; tag.textContent = c.state.toUpperCase();
+    const name = document.createElement("b"); name.textContent = c.name;
+    const d = document.createElement("span"); d.textContent = c.detail;
+    li.append(tag, name, d); ul.append(li);
+  }
+  if (r.other_laptop_streaming) msg("runMsg", "Another laptop is streaming right now. Starting here takes over from it.", "");
+}
+
+function applyState(st, formToo) {
+  running = st.running;
+  $("runPill").textContent = running ? "Running" : "Stopped";
+  $("runPill").classList.toggle("on", running);
+  $("start").disabled = running; $("stop").disabled = !running;
+  $("restartBanner").classList.toggle("show", !!st.restart_needed);
+  $("dashLink").href = st.dashboard;
+  if (formToo) fillForm(st.settings); else S = st.settings;
+  const log = $("log"), atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+  log.textContent = st.log.join("\n") || "Detection log appears here.";
+  if (atEnd) log.scrollTop = log.scrollHeight;
+  setStream(running);
+}
+
+function setStream(on) {
+  const box = $("video");
+  if (on && !streamOn && S?.worker_url) {
+    box.textContent = "";
+    const img = document.createElement("img");
+    img.alt = "Live video with detected people";
+    img.src = `${S.worker_url}/live/video?panel=${Date.now()}`;
+    box.append(img);
+    streamOn = true;
+  } else if (!on && streamOn) {
+    box.textContent = "";
+    const t = document.createElement("span"); t.textContent = "Not running"; box.append(t);
+    streamOn = false;
+  }
+}
+
+async function pollLive() {
+  if (!S?.worker_url) return;
+  try {
+    const r = await fetch(`${S.worker_url}/live/status`, { cache: "no-store" });
+    const d = await r.json();
+    $("sCount").textContent = d.online ? `${d.count} / ${d.limit}` : "-";
+    $("sState").textContent = d.online ? (d.crowded ? "CROWDED" : "NORMAL") : "offline";
+    $("sCamera").textContent = d.online ? d.camera : "-";
+    $("sEsp").textContent = d.online ? d.esp32 : "-";
+    $("sDb").textContent = d.online ? d.db : "-";
+    $("sFps").textContent = d.online ? `${Math.round(d.fps)} FPS` : "-";
+  } catch { $("sState").textContent = "worker not reachable"; }
+}
+
+function busy(btn, on) { btn.disabled = on; if (on) btn.dataset.t = btn.textContent, btn.textContent = "..."; else if (btn.dataset.t) btn.textContent = btn.dataset.t; }
+async function run(btn, fn) { busy(btn, true); try { await fn(); } finally { busy(btn, false); if (btn === $("start") || btn === $("stop")) { $("start").disabled = running; $("stop").disabled = !running; } } }
+
+$("save").onclick = (e) => run(e.target, async () => { try { await save(); } catch (err) { msg("runMsg", err.message, "bad"); } });
+$("check").onclick = (e) => run(e.target, async () => {
+  try { await save(true); msg("runMsg", "Checking..."); const r = await api("/api/check", {}); renderChecks(r);
+        msg("runMsg", r.ready ? "Ready." : "Not ready: see the FAIL lines.", r.ready ? "ok" : "bad"); }
+  catch (err) { msg("runMsg", err.message, "bad"); }
+});
+$("start").onclick = (e) => run(e.target, async () => {
+  try { applyState(await api("/api/start", { settings: collect() }), true); msg("runMsg", "Started. The first start loads the YOLO model (a few seconds).", "ok"); }
+  catch (err) { msg("runMsg", err.message, "bad"); }
+});
+$("stop").onclick = (e) => run(e.target, async () => { try { applyState(await api("/api/stop", {})); msg("runMsg", "Stopped.", ""); } catch (err) { msg("runMsg", err.message, "bad"); } });
+$("restart").onclick = (e) => run(e.target, async () => { try { applyState(await api("/api/restart", {})); msg("runMsg", "Restarted with the new settings.", "ok"); } catch (err) { msg("runMsg", err.message, "bad"); } });
+
+$("testCamera").onclick = (e) => run(e.target, async () => {
+  const img = $("cameraPreview");
+  img.style.display = "none";
+  try {
+    await save(true); msg("cameraMsg", "Getting a picture...");
+    const blob = await api("/api/snapshot");
+    img.src = URL.createObjectURL(blob); img.style.display = "block";
+    msg("cameraMsg", "Camera works.", "ok");
+  } catch (err) { msg("cameraMsg", err.message, "bad"); }
+});
+$("findWebcams").onclick = (e) => run(e.target, async () => {
+  try { const list = await api("/api/webcams"); fillWebcams(list, list[0]?.index ?? 0);
+        msg("cameraMsg", list.length ? `Found ${list.length} webcam(s).` : "No webcam found.", list.length ? "ok" : "bad"); }
+  catch (err) { msg("cameraMsg", err.message, "bad"); }
+});
+
+$("refreshPorts").onclick = loadPorts;
+$("refreshPorts2").onclick = loadPorts;
+$("testEsp").onclick = (e) => run(e.target, async () => {
+  const mode = segValue("espSeg");
+  if (mode === "off") return msg("espMsg", "ESP32 is off. Choose Wi-Fi or USB cable.", "");
+  try {
+    msg("espMsg", "Asking the ESP32...");
+    const i = await api("/api/esp32/info", { via: mode, host: $("espHost").value.trim(), port: $("serialPort").value });
+    const wifi = i.connected ? `Wi-Fi "${i.ssid}", address ${i.ip}` : (i.ssid ? `not on Wi-Fi "${i.ssid}" (${i.reason})` : "no Wi-Fi saved");
+    msg("espMsg", `ESP32 answers. ${wifi}. Lights: ${i.state}.` + (i.setup_hotspot ? `\nSetup hotspot on: ${i.setup_hotspot}` : ""), "ok");
+  } catch (err) { msg("espMsg", err.message, "bad"); }
+});
+$("sendWifi").onclick = (e) => run(e.target, async () => {
+  const via = segValue("viaSeg");
+  const ssid = $("ssid").value.trim();
+  if (!ssid) return msg("wifiMsg", "Enter the Wi-Fi name.", "bad");
+  msg("wifiMsg", via === "usb" ? "Sending over USB and waiting for the ESP32 to join (up to 30 s)..." : "Sending over Wi-Fi...");
+  try {
+    const r = await api("/api/esp32/wifi", { via, ssid, password: $("wifiPass").value, port: $("viaPort").value, host: $("espHost").value.trim() });
+    if (r.joined) {
+      msg("wifiMsg", `The ESP32 joined "${r.info.ssid}". Its address: ${r.info.ip}. Saved as the ESP32 address (Wi-Fi mode).`, "ok");
+      seg("espSeg", "wifi", showEsp); showEsp("wifi"); $("espHost").value = r.info.ip;
+      await save(true);
+    } else {
+      msg("wifiMsg", `Sent. The ESP32 is switching to "${ssid}". If that is another network, move the laptop there too, then find the ESP32's address over USB or on its setup page.`, "ok");
+    }
+    $("wifiPass").value = "";
+  } catch (err) { msg("wifiMsg", err.message, "bad"); }
+});
+
+async function refresh() {
+  try { applyState(await api("/api/state")); } catch { $("runPill").textContent = "Panel closed"; }
+}
+
+(async () => {
+  const st = await api("/api/state");
+  applyState(st, true);
+  seg("viaSeg", "usb", showVia); showVia("usb");
+  await loadPorts();
+  $("check").click();
+  setInterval(refresh, 1500);
+  setInterval(pollLive, 1500);
+})();
+</script>
+</body>
+</html>

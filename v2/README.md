@@ -22,8 +22,8 @@ Vercel: web/  ── crowd.etzalgroup.com ── the dashboard (static Next.js, 
 |---|---|---|
 | `web/` | **Vercel** | The dashboard. Only static pages; the one setting is `NEXT_PUBLIC_WORKER_URL` |
 | `worker/` | **etzal** | Node service: live relay, dashboard API, log ingest into Postgres. Has its own tests |
-| `edge/` | laptop | Camera on its own thread, YOLO, ESP32, pushes video out over one WebSocket, on-disk log queue |
-| `esp32/` | ESP32 | Same sketch as v1; Wi-Fi name/password in `secrets.h` (gitignored) |
+| `edge/` | laptop | Laptop app (control panel), camera on its own thread, YOLO, ESP32, pushes video out over one WebSocket, on-disk log queue |
+| `esp32/` | ESP32 | Lights + buzzer; Wi-Fi set from the laptop app or its own setup hotspot, stored on the ESP32 |
 | `deploy/` | etzal | `setup-server.sh` (once), `autodeploy.sh` (CD), `worker-release.sh`, pm2 config |
 | `../.github/workflows/v2-ci.yml` | GitHub | CI for everything above |
 
@@ -91,18 +91,50 @@ Once `https://crowd-api.etzalgroup.com/live/health` answers, stop the quick tunn
 `pm2 stop crowd-tunnel && pm2 save`. Optionally limit who may read the API from a browser:
 `CORS_ORIGINS=https://crowd.etzalgroup.com` in `worker.env`, then `pm2 restart crowd-worker`.
 
-## Run the laptop side (`edge/`)
+## Run it (the only thing you start yourself)
+
+The worker, the database and the website are always on. On the laptop:
+
+1. **Phone**: IP Webcam app → *Start server* (same Wi-Fi/hotspot as the laptop). Or use a webcam.
+2. **ESP32**: power it (or plug in the USB cable).
+3. Double-click **Crowd Laptop** on the desktop (or `v2\edge\run.bat`). The **laptop app** opens
+   at `http://127.0.0.1:8765`: choose the camera (phone / webcam / simulation / URL) and the ESP32
+   (Wi-Fi / USB / off), set the ESP32's Wi-Fi, *Check everything*, **Start detection**.
+4. Open **https://crowd.etzalgroup.com**: live video, count and charts.
+
+**https://crowd.etzalgroup.com/laptop** (the *Laptop* button on the dashboard) does the same from the
+website, in Chrome/Edge on that laptop: it finds the laptop app, lists what is installed or missing
+(and installs missing packages), shows the webcams with a picture of each, switches the camera and
+starts/stops detection. The first time, the browser asks to let the site reach apps on this
+computer: click **Allow**. The laptop app only accepts this website and itself (`PANEL_ALLOWED_ORIGINS`
+adds more), and only listens on 127.0.0.1.
+
+### A new laptop
+
+Open https://crowd.etzalgroup.com/laptop: it lists what the laptop needs. Then in PowerShell:
 
 ```powershell
-cd v2/edge
-pip install -r requirements.txt
-copy .env.example .env      # WORKER_URL and EDGE_TOKEN
-python main.py
+irm https://crowd.etzalgroup.com/install.ps1 | iex
 ```
 
-`edge/.env` only needs what is new; `CAMERA_SOURCE`, `ESP32_MODE`, `ESP32_HOST` and `SERIAL_PORT` are
-read from the project's root `.env`, like v1. `ESP32_MODE` accepts `wifi`, `usb` or `off`.
-The token: `ssh -p 2222 mydebian 'grep EDGE_TOKEN ~/crowd-intelligent/worker.env'`
+It installs Python 3.12 if missing (winget, no admin), downloads `v2/edge` from GitHub into
+`%LOCALAPPDATA%\CrowdControl\edge`, installs the packages (about 1 GB), adds **Crowd Laptop** to the
+desktop and starts it. Run it again to update; settings are kept. Then paste the edge token once:
+`ssh -p 2222 mydebian 'grep EDGE_TOKEN ~/crowd-intelligent/worker.env'`
+
+### ESP32 Wi-Fi without re-flashing
+
+Flash `esp32/crowd_actuator` once (Arduino IDE, board *ESP32 Dev Module*; `secrets.h` is optional).
+After that the Wi-Fi name/password are stored on the ESP32 and can be changed:
+
+- **USB cable**: laptop app → ESP32 → *Set the ESP32's Wi-Fi network* → *Send over USB cable*.
+  The ESP32 joins and reports its address, which the app saves (Wi-Fi mode).
+- **No laptop**: with no working Wi-Fi for 30 s the ESP32 opens the hotspot `Crowd-ESP32-XXXX`
+  (password `crowd1234`). Join it with a phone; the setup page opens (or `http://192.168.4.1/wifi`).
+- **On the same network**: `http://<ESP32 address>/wifi`.
+
+Without the app: `python main.py` (settings in `v2/edge/.env`, see `.env.example`) and
+`python check.py` to test every link.
 
 | Failure | What happens |
 |---|---|
