@@ -18,6 +18,8 @@
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; }
 .card h2 { font-size: 16px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
 .wide { grid-column: 1 / -1; }
+.ask { border-color: var(--orange); background: #fff8ef; }
+.ask p { font-size: 14px; line-height: 1.55; margin: 6px 0; }
 .muted { color: var(--muted); font-size: 13px; margin: 6px 0 12px; }
 .muted code, .steps code { font-size: 12px; background: var(--grid); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
 .badText { color: var(--red); font-size: 13px; }

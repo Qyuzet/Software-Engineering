@@ -12,6 +12,19 @@ import { AGENT_URL, INSTALL_COMMAND } from "@/lib/constants";
 
 import styles from "./LaptopSetup.module.css";
 
+// Chrome/Edge ask once before a website may reach apps on this computer ("local network access").
+// Returns the PermissionStatus (state: prompt | granted | denied), or null if the browser has no such permission.
+async function localAccessPermission() {
+  for (const name of ["loopback-network", "local-network-access"]) {
+    try {
+      return await navigator.permissions.query({ name });
+    } catch {
+      /* not supported under this name */
+    }
+  }
+  return null;
+}
+
 async function agent(path, body, timeoutMs = 8000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -82,15 +95,33 @@ function BrowserCameras() {
   );
 }
 
-function NotConnected({ checking }) {
+function NotConnected({ checking, permission }) {
+  if (permission === "prompt") {
+    return (
+      <section className={`${styles.card} ${styles.wide} ${styles.ask}`}>
+        <h2>Click &ldquo;Allow&rdquo; in the browser</h2>
+        <p>
+          Next to the address bar the browser asks whether <b>crowd.etzalgroup.com</b> may <b>access other apps and
+          services on this device</b>. Click <b>Allow</b>: it only lets this page talk to the Crowd Laptop app on this
+          computer (camera, requirements, start/stop). Nothing is installed by it.
+        </p>
+        <p className={styles.muted}>Don&apos;t see it? Click the icon left of the address bar, or reload the page.</p>
+      </section>
+    );
+  }
   return (
     <>
+      {permission === "denied" && (
+        <section className={`${styles.card} ${styles.wide} ${styles.ask}`}>
+          <h2>This page is blocked from the laptop app</h2>
+          <p>Click the icon left of the address bar &rarr; <b>Site settings</b> &rarr; allow access to <b>apps on this
+            device</b> (local network access), then reload the page.</p>
+        </section>
+      )}
       <section className={styles.card}>
         <h2>{checking ? "Looking for the laptop app..." : "This laptop is not connected yet"}</h2>
         <p className={styles.muted}>
-          {checking
-            ? "If the browser asks to let this site access apps on this device, click Allow."
-            : "This page talks to the Crowd Laptop app on this computer. It connects by itself as soon as the app runs."}
+          This page talks to the Crowd Laptop app on this computer. It connects by itself as soon as the app runs.
         </p>
         <ol className={styles.steps}>
           <li><b>Already installed?</b> Double-click <b>Crowd Laptop</b> on the desktop (or <code>v2\edge\run.bat</code>).</li>
@@ -100,7 +131,7 @@ function NotConnected({ checking }) {
             It installs Python if needed, the app and its packages (about 1 GB, a few minutes), puts
             <b> Crowd Laptop</b> on the desktop and starts it.
           </li>
-          <li>Blocked earlier? Click the icon left of the address bar &rarr; Site settings &rarr; allow access to apps/devices on this computer, then reload.</li>
+          <li>The first time, the browser asks to let this site access apps on this device: click <b>Allow</b>.</li>
         </ol>
       </section>
 
@@ -264,6 +295,7 @@ export default function LaptopSetup() {
   const [status, setStatus] = useState("checking");     // checking | missing | connected
   const [sys, setSys] = useState(null);
   const [state, setState] = useState(null);
+  const [permission, setPermission] = useState(null);   // prompt | granted | denied | null (not asked by this browser)
   const first = useRef(true);
 
   const refresh = useCallback(async () => {
@@ -280,12 +312,27 @@ export default function LaptopSetup() {
   useEffect(() => {
     let timer;
     let stopped = false;
+    let perm = null;
     const loop = async () => {
       await refresh();
       if (!stopped) timer = setTimeout(loop, 2500);
     };
+    localAccessPermission().then((p) => {
+      if (stopped || !p) return;
+      perm = p;
+      setPermission(p.state);
+      p.onchange = () => {                 // "Allow" clicked: connect right away
+        setPermission(p.state);
+        clearTimeout(timer);
+        loop();
+      };
+    });
     loop();
-    return () => { stopped = true; clearTimeout(timer); };
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      if (perm) perm.onchange = null;
+    };
   }, [refresh]);
 
   return (
@@ -305,7 +352,7 @@ export default function LaptopSetup() {
             <Detection state={state} refresh={refresh} />
           </>
         ) : (
-          <NotConnected checking={status === "checking"} />
+          <NotConnected checking={status === "checking"} permission={permission} />
         )}
       </main>
     </div>
